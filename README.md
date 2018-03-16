@@ -6,7 +6,7 @@ then from the target/classes directory
 
 start the rmi registry 
 
-rmiregistry &
+`rmiregistry &`
 
 now spin up a server:
 
@@ -18,7 +18,7 @@ and in two separate terminals also spin up client apps
 
 and 
 
-`java org.b_verify.BVerifyClientApp "BIN" "HENRY" 1
+`java org.b_verify.BVerifyClientApp "BIN" "HENRY" 1`
 
 
 
