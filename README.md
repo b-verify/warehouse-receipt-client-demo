@@ -14,11 +14,11 @@ now spin up a server:
 
 and in two separate terminals also spin up client apps
 
-`java org.b_verify.BVerifyClientApp "HENRY" "BIN" 0`
+`java org.b_verify.BVerifyClientApp "HENRY" "BINH" 0`
 
 and 
 
-`java org.b_verify.BVerifyClientApp "BIN" "HENRY" 1`
+`java org.b_verify.BVerifyClientApp "BINH" "HENRY" 1`
 
 
 
