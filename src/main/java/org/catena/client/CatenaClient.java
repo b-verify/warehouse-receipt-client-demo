@@ -11,7 +11,6 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.WalletProtobufSerializer.WalletFactory;
 import org.catena.common.CatenaService;
-import org.catena.common.CatenaStatement;
 import org.catena.common.CatenaWalletExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +18,7 @@ import org.slf4j.LoggerFactory;
 public class CatenaClient extends CatenaService {
     
     private static final Logger log = LoggerFactory.getLogger(CatenaClient.class);
-    protected static final String BITCOINJ_FILE_PREFIX = "catena-client";
+    protected static final String BITCOINJ_FILE_PREFIX = "bverify-client";
         
     /**
      * We need this until bitcoinj allows us to rewind the blockchain and redownload
@@ -114,22 +113,6 @@ public class CatenaClient extends CatenaService {
      */
     private void beforeBlockChainDownload() {
         wallet = getCatenaWallet();
-        
-        wallet.addStatementListener(new CatenaStatementListener() {
-
-			@Override
-			public void onStatementAppended(CatenaStatement s) {
-				System.out.println("ADDING STATEMENT: "+s.getAsString());
-				
-			}
-
-			@Override
-			public void onStatementWithdrawn(CatenaStatement s) {
-				System.out.println("WITHDRAWING STATEMENT: "+s.toString());
-			}
-        	
-        });
-        
         ext = wallet.getCatenaExtension();
         CatenaWalletListener listener = new CatenaWalletListener(wallet);
         List<Address> watchedAddrs = wallet().getWatchedAddresses();

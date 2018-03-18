@@ -12,6 +12,7 @@ import org.bitcoinj.wallet.WalletExtension;
 
 public abstract class CatenaService extends WalletAppKit {
     
+	// TODO: check but the isClient argument is unused - @henryaspegren - fix in Catena code
     public CatenaService(NetworkParameters params, File directory, String filePrefix, boolean isClient) {
         super(params, directory, filePrefix);
         super.walletFactory = new SimpleWallet.Factory();

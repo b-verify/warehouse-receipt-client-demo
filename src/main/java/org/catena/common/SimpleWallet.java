@@ -74,7 +74,7 @@ public class SimpleWallet extends Wallet {
         
     }
 
-    // TODO: check but I think this will ensure we always download the entire chain
+    // TODO: check but I think this will ensure we always download the entire chain - @henryaspegren
     @Override
     public long getEarliestKeyCreationTime() {
     	return 0;
