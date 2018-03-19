@@ -1,0 +1,13 @@
+#!/bin/bash
+
+ADDRESS_TO_FUND=mv8R7X8Q8Wz96FGjxxPdtBJRbxFnCc7Hof
+
+# generate 101 blocks to spend a coinbase tx 
+bitcoin-cli -regtest -datadir=regtest-data/ generate 101
+
+# send 25 bitcoins to address (funding tx)
+bitcoin-cli -regtest -datadir=regtest-data/ sendtoaddress $ADDRESS_TO_FUND 25
+
+# give the funding tx one confirmation 
+bitcoin-cli -regtest -datadir=regtest-data/ generate 1
+
