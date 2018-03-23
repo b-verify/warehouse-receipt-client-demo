@@ -26,12 +26,13 @@ public class BVerifyClient implements BVerifyProtocolClient, CatenaStatementList
 	private final List<BVerifyCommitment> commitments;
 	private final String clientName;
 	private final BVerifyProtocolServer server;
+	private final BVerifyClientGui appgui;
 	
-	public BVerifyClient(String name, BVerifyProtocolServer server) {
-		this.commitments = new ArrayList<BVerifyCommitment>();
-        this.clientName = name;
-        this.server = server;
-
+	public BVerifyClient(String name, BVerifyProtocolServer srvr, BVerifyClientGui gui) {
+		appgui = gui;
+		commitments = new ArrayList<BVerifyCommitment>();
+        clientName = name;
+        server = srvr;
 	}
 	
 	public synchronized Proof proposeTransfer(String userTo, String userFrom, Proof proofOfUpdate) throws RemoteException {
@@ -43,18 +44,26 @@ public class BVerifyClient implements BVerifyProtocolClient, CatenaStatementList
 	@Override
 	public synchronized void onStatementAppended(CatenaStatement s) {
 		// add BVerify commitment 
-		int commitmentNumber = this.commitments.size() - 1;
+		int commitmentNumber = this.commitments.size()+1;
 		BVerifyCommitment commitment = new BVerifyCommitment(commitmentNumber, s.getData(), 
 				s.getTxHash());
 		this.commitments.add(commitment);
+		
+		
 		// ask server for a proof
-		try {
-			System.out.println("Asking server to prove commitment: "+commitment.toString());
-			System.out.println(
-					this.server.getBalance(this.clientName, commitmentNumber));
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
+//		try {
+//			System.out.println("Asking server to prove commitment: "+commitment.toString());
+//			System.out.println(
+//					this.server.getBalance(this.clientName, commitmentNumber));
+//		} catch (RemoteException e) {
+//			e.printStackTrace();
+//		}
+		
+		// assume it succeeds (for now)
+		
+		// update the gui
+		appgui.updateCurrentCommitment(commitment.getCommitmentNumber(), new String(commitment.getCommitmentData()), 
+				commitment.getCommitmentTxnHash().toString());
 	}
 
 	@Override

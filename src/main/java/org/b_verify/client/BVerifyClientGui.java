@@ -3,6 +3,8 @@ package org.b_verify.client;
 import org.eclipse.ui.forms.widgets.FormToolkit;
 
 import java.io.IOException;
+import java.rmi.AlreadyBoundException;
+import java.rmi.NotBoundException;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.*;
@@ -13,6 +15,7 @@ public class BVerifyClientGui {
 
 	protected Shell shell;
 	private final FormToolkit formToolkit = new FormToolkit(Display.getDefault());
+	private Display display;
 	
 	// server config 
 	private Text serverAddress;
@@ -26,22 +29,25 @@ public class BVerifyClientGui {
 
 	private Label lblIncomingHeader;
 	private Table tableIncoming;
-
-	private Label lblAllUsersHeader;
 	private Table tableAllUserBalances;
-	private Label lblAllUserLastUpdateLabel;
-	private Label lblAllUserLastUpdateActualTime;
+
+
+	private Label lblSyncStatus;
+	private Label lblSyncLastVerifiedUpdateDataLabel;
+	private Label lblSyncLastVerifiedUpdateDataValue;
+	private Label lblSyncLastVerifiedUpdateCommitmentNumberLabel;
+	private Label lblSyncLastVerifiedUpdateCommitmentNumberValue;
+	private Label lblSyncLastVerifiedUpdateTxnHashLabel;
+	private Label lblSyncLastVerifiedUpdateTxnHashValue;
+
 	
 	// configuration information (freeze this once started)
 	
+	private boolean configured;
 	private Combo networkSelector;
 	private Button startSync;
 	private static final String[] NETWORKS = new String[] { "REGTEST", "TESTNET3", "MAINNET" };
 
-
-	private String txid;
-	private String address;
-	private boolean started;
 
 	/**
 	 * Launch the application.
@@ -58,10 +64,10 @@ public class BVerifyClientGui {
 	}
 
 	/**
-	 * Open the window.
+	 * Open the window and start the main GUI thread
 	 */
 	public void open() {
-		Display display = Display.getDefault();
+		display = Display.getDefault();
 		createContents();
 		shell.open();
 		shell.layout();
@@ -79,10 +85,13 @@ public class BVerifyClientGui {
 		// Create Application Shell
 		shell = new Shell();
 		shell.setSize(500, 630);
-		shell.setText("B_Verify Client Application");
+		shell.setText("b_verify Client Application");
 
 		// create server config 
 		createServerConfig();
+		
+		// sync progress
+		syncProgressStatus();
 
 		// Create User Configuration Information Section
 
@@ -93,7 +102,7 @@ public class BVerifyClientGui {
 		// createIncomingTransferSection();
 
 		// Create All User Balances Information Section
-		// createAllUserBalancesSection();
+		//createAllUserBalancesSection();
 	}
 
 	/**
@@ -141,33 +150,57 @@ public class BVerifyClientGui {
 		startSync.setBounds(67, 130, 226, 30);
 		formToolkit.adapt(startSync, true, true);
 		startSync.setText("START SYNC");
+		
+		// mark as starting not configured
+		configured = false;
 
 		// creates a catena wallet and starts syncing!
+		BVerifyClientGui gui = this;
+		
 		Listener startSyncListener = new Listener() {
 			public void handleEvent(Event event) {
+				if (configured) {
+					System.out.println("ALREADY CONFIGURED");
+				}
 				if (networkSelector.getSelectionIndex() == -1) {
 					System.out.println("NOTHING SELECTED - FAIL ");
 				}
 				String network = networkSelector.getText();
 				String address = serverAddress.getText();
 				String txid = serverTXID.getText();
-				
+				configured = true;			
 				try {
 					BVerifyClientApp appThread = new BVerifyClientApp(address,
-							txid, network);
+							txid, network, gui);
 					// start the client app asynchronously 
 					Thread tr = new Thread(appThread);
 					tr.start();
-				} catch (IOException e) {
+				} catch (IOException | AlreadyBoundException | NotBoundException e) {
 					e.printStackTrace();
 					System.exit(1);
 				}
-				
 			}
 		};
 		
 		startSync.addListener(SWT.Selection, startSyncListener);
 	}
+	
+	
+	// all updates to GUI must be scheduled via the GUI thread 
+	// this is an example
+	public void updateCurrentCommitment(int newCommitmentNumber, String newCommitmentData, String newCommitmentTxnHash) {
+		display.asyncExec(new Runnable() {
+			@Override
+			public void run() {
+				lblSyncLastVerifiedUpdateCommitmentNumberValue.setText(Integer.toString(newCommitmentNumber).toString());
+				lblSyncLastVerifiedUpdateDataValue.setText(newCommitmentData);
+				lblSyncLastVerifiedUpdateTxnHashValue.setText(newCommitmentTxnHash);
+			}
+		});
+	}
+	
+	
+	
 
 	/**
 	 * Sets up the outgoing transfer information section.
@@ -251,6 +284,49 @@ public class BVerifyClientGui {
 		tableItemIncomingPublicKey.setText("senderpublickey");
 	}
 
+	
+	private void syncProgressStatus() {
+		lblSyncStatus = new Label(shell, SWT.NONE);
+		lblSyncStatus.setAlignment(SWT.CENTER);
+		lblSyncStatus.setBounds(67, 349, 371, 20);
+		formToolkit.adapt(lblSyncStatus, true, true);
+		lblSyncStatus.setText("Last Verified Commitment");
+		
+		lblSyncLastVerifiedUpdateCommitmentNumberLabel = new Label(shell, SWT.NONE);
+		lblSyncLastVerifiedUpdateCommitmentNumberLabel.setBounds(67, 380, 139, 20);
+		formToolkit.adapt(lblSyncLastVerifiedUpdateCommitmentNumberLabel, true, true);
+		lblSyncLastVerifiedUpdateCommitmentNumberLabel.setText("Number:");
+
+		lblSyncLastVerifiedUpdateCommitmentNumberValue = new Label(shell, SWT.NONE);
+		lblSyncLastVerifiedUpdateCommitmentNumberValue.setBounds(212, 380, 226, 20);
+		formToolkit.adapt(lblSyncLastVerifiedUpdateCommitmentNumberValue, true, true);
+		lblSyncLastVerifiedUpdateCommitmentNumberValue.setText("N/A");
+		
+		
+		lblSyncLastVerifiedUpdateDataLabel = new Label(shell, SWT.NONE);
+		lblSyncLastVerifiedUpdateDataLabel.setBounds(67, 410, 139, 20);
+		formToolkit.adapt(lblSyncLastVerifiedUpdateDataLabel, true, true);
+		lblSyncLastVerifiedUpdateDataLabel.setText("Data:");
+
+		lblSyncLastVerifiedUpdateDataValue = new Label(shell, SWT.NONE);
+		lblSyncLastVerifiedUpdateDataValue.setBounds(212, 410, 226, 20);
+		formToolkit.adapt(lblSyncLastVerifiedUpdateDataValue, true, true);
+		lblSyncLastVerifiedUpdateDataValue.setText("N/A");
+		
+		lblSyncLastVerifiedUpdateTxnHashLabel = new Label(shell, SWT.NONE);
+		lblSyncLastVerifiedUpdateTxnHashLabel.setBounds(67, 440, 139, 20);
+		formToolkit.adapt(lblSyncLastVerifiedUpdateTxnHashLabel, true, true);
+		lblSyncLastVerifiedUpdateTxnHashLabel.setText("Txn Hash:");
+
+		lblSyncLastVerifiedUpdateTxnHashValue = new Label(shell, SWT.NONE);
+		lblSyncLastVerifiedUpdateTxnHashValue.setBounds(212, 440, 226, 20);
+		formToolkit.adapt(lblSyncLastVerifiedUpdateTxnHashValue, true, true);
+		lblSyncLastVerifiedUpdateTxnHashValue.setText("N/A");
+
+
+		
+	}
+	
 	/**
 	 * Sets up the all user balances information section.
 	 */
@@ -265,7 +341,7 @@ public class BVerifyClientGui {
 		TableColumn tblclmnAllUserPublicKey = new TableColumn(tableAllUserBalances, SWT.NONE);
 		tblclmnAllUserPublicKey.setWidth(263);
 		tblclmnAllUserPublicKey.setText("User Public Key");
-
+		
 		TableColumn tblclmnAllUserBalance = new TableColumn(tableAllUserBalances, SWT.NONE);
 		tblclmnAllUserBalance.setWidth(106);
 		tblclmnAllUserBalance.setText("Balance");
@@ -274,36 +350,7 @@ public class BVerifyClientGui {
 		TableItem tableItemAllUserPublicKey = new TableItem(tableAllUserBalances, SWT.NONE);
 		tableItemAllUserPublicKey.setText(new String[] {});
 		tableItemAllUserPublicKey.setText("anotheruserpublickey");
+		
 
-		Button btnAllUserGetBalances = new Button(shell, SWT.NONE);
-		btnAllUserGetBalances.setBounds(67, 557, 371, 19);
-		formToolkit.adapt(btnAllUserGetBalances, true, true);
-		btnAllUserGetBalances.setText("Update All User Balances");
-
-		lblAllUserLastUpdateLabel = new Label(shell, SWT.NONE);
-		lblAllUserLastUpdateLabel.setBounds(67, 532, 139, 19);
-		formToolkit.adapt(lblAllUserLastUpdateLabel, true, true);
-		lblAllUserLastUpdateLabel.setText("Last Verified Update:");
-
-		lblAllUserLastUpdateActualTime = new Label(shell, SWT.NONE);
-		lblAllUserLastUpdateActualTime.setBounds(212, 532, 226, 19);
-		formToolkit.adapt(lblAllUserLastUpdateActualTime, true, true);
-		lblAllUserLastUpdateActualTime.setText("March 18, 2018 3:00:00 PM EST");
-
-		lblAllUsersHeader = new Label(shell, SWT.NONE);
-		lblAllUsersHeader.setAlignment(SWT.CENTER);
-		lblAllUsersHeader.setBounds(67, 349, 371, 18);
-		formToolkit.adapt(lblAllUsersHeader, true, true);
-		lblAllUsersHeader.setText("All User Balances Information");
-
-		Listener getBalancesButtonListener = new Listener() {
-			public void handleEvent(Event event) {
-				// Call here to b_verify client to get updated verified user balances and time
-				// stamp.
-				tableItemAllUserPublicKey.setText("updated balance from another user");
-				lblAllUserLastUpdateActualTime.setText("timestamp of last update");
-			}
-		};
-		btnAllUserGetBalances.addListener(SWT.Selection, getBalancesButtonListener);
 	}
 }

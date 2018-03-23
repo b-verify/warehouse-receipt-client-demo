@@ -2,6 +2,8 @@ package org.b_verify.client;
 
 import java.io.File;
 import java.io.IOException;
+import java.rmi.AlreadyBoundException;
+import java.rmi.NotBoundException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
@@ -10,13 +12,12 @@ import java.util.Iterator;
 import org.b_verify.common.BVerifyProtocolClient;
 import org.b_verify.common.BVerifyProtocolServer;
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.params.RegTestParams;
 import org.catena.client.CatenaClient;
-import org.catena.client.CatenaStatementListener;
 import org.catena.common.CatenaStatement;
-
 
 /**
  * The main app is responsible for setting up and starting the client as well as
@@ -26,111 +27,72 @@ import org.catena.common.CatenaStatement;
  *
  */
 public class BVerifyClientApp implements Runnable {
+
+	/** Configuration **/
+
+	// client parameters
+	private final ECKey clientKey;
+	private final Address clientAddress;
+
+	// parameters for configuration commitment
+	private final String directory;
+	private final NetworkParameters params;
+	private final Sha256Hash txid;
+	private final Address addr;
+
+	// components
+	private Registry registry;
+	private BVerifyClient bverifyclient;
+	private BVerifyProtocolServer bverifyserver;
+	private BVerifyClientGui bverifygui;
+	private CatenaClient commitmentReader;
+
 	
-	private final CatenaClient commitmentReader;
-	
-	public BVerifyClientApp(String address, String transactionid, String network) throws IOException {
-		NetworkParameters params = RegTestParams.get();
-		String directory = "./client-data";
-		Address addr = Address.fromBase58(params, address);
-		Sha256Hash txid = Sha256Hash.wrap(transactionid);
-		commitmentReader = 
-				new CatenaClient(params, new File(directory), txid, addr, null);
-		System.out.println("setup b_verify client");
+	public BVerifyClientApp(String serveraddress, String transactionid, String network, 
+			BVerifyClientGui gui) 
+			throws IOException, AlreadyBoundException, NotBoundException {
 		
+		
+		bverifygui = gui;
+		
+		// bitcoin commitment reader (catena) setup
+		params = RegTestParams.get();
+		directory = "./client-data";
+		addr = Address.fromBase58(params, serveraddress);
+		txid = Sha256Hash.wrap(transactionid);
+		commitmentReader = new CatenaClient(params, new File(directory), txid, addr, null);
+		
+		// client 
+		clientKey = new ECKey();
+		clientAddress = clientKey.toAddress(params);
+		
+		// rmi registry (null corresponds to localhost)
+		// registry = LocateRegistry.getRegistry(null);
+
+		// b_verify server
+		// bverifyserver = (BVerifyProtocolServer) registry.lookup("Server");
+		
+		
+		// b_verify client
+		bverifyclient = new BVerifyClient(clientAddress.toBase58(), bverifyserver, gui);
+
+		
+		// BVerifyProtocolClient clientStub = (BVerifyProtocolClient) UnicastRemoteObject.exportObject(bverifyclient, 0);
+		// registry.bind(clientAddress.toBase58(), clientStub);			
+
 	}
-	
-
-	public static void main(String[] args) {
-		try {
-
-			String name = args[0];
-			boolean sendTransfer = Boolean.parseBoolean(args[1]);
-			
-			// these config parameters should moved into a GUI || config file
-			String directory = "./"+name;
-			String txidHex = "";
-			String addr = "";
-			NetworkParameters params = RegTestParams.get();
-			Sha256Hash txid;
-			Address chainAddr = Address.fromBase58(params, addr);
-			txid = Sha256Hash.wrap(txidHex);
-			
-			// rmi registry (null corresponds to localhost)
-			Registry registry = LocateRegistry.getRegistry(null);
-
-			// b_verify server
-			BVerifyProtocolServer server = (BVerifyProtocolServer) registry.lookup("Server");
-			
-			// b_verify client
-			BVerifyClient client = new BVerifyClient(name, server);
-
-			// catena client 
-			CatenaClient commitmentReader = new CatenaClient(params, new File(directory), txid, chainAddr, null);
-			
-			// link them together
-			commitmentReader.getCatenaWallet().addStatementListener(client);
-
-			BVerifyProtocolClient clientStub = (BVerifyProtocolClient) UnicastRemoteObject.exportObject(client, 0);
-			registry.bind(name, clientStub);
-			
-			// start the commitment reader 
-			commitmentReader.startAsync();
-			commitmentReader.awaitRunning();
-			
-			
-			if (sendTransfer) {
-				String[] serverandclients = registry.list();
-				String nameOtherClient = "";
-				for(String entryname : serverandclients) {
-					if (!entryname.equals(name) && !entryname.equals("Server")){
-						nameOtherClient = entryname;
-					}
-				}
-				System.out.println("requesting transfer to: "+nameOtherClient);
-				System.out.println("response: " + server.transfer(name, nameOtherClient, 100));
-			}
-
-		} catch (Exception e) {
-			System.err.println("Client exception: " + e.toString());
-			e.printStackTrace();
-		}
-	}
-
 
 	@Override
 	public void run() {
-		System.out.println("--------Starting client-----------");
-		
 		commitmentReader.startAsync();
 		commitmentReader.awaitRunning();
-		System.out.println("--------Adding Statement Listener-----------");
-
 		Iterator<CatenaStatement> itr = commitmentReader.getCatenaWallet().statementIterator(true);
-		while(itr.hasNext()) {
-			System.out.println("stmt: "+itr.next().toString());
+		// push the existing statements to the client handler
+		while (itr.hasNext()) {
+			bverifyclient.onStatementAppended(itr.next());
 		}
-		
-		commitmentReader.getCatenaWallet().addStatementListener(new CatenaStatementListener() {
+		// add listener for future statements
+		commitmentReader.getCatenaWallet().addStatementListener(bverifyclient);
 
-			@Override
-			public void onStatementAppended(CatenaStatement s) {
-				System.out.println("---------NEW STATEMENT: --------");
-				System.out.println(s);
-			}
-
-			@Override
-			public void onStatementWithdrawn(CatenaStatement s) {
-			}
-			
-		});
-		System.out.println("--------Shutting Down-----------");
-
-		commitmentReader.stopAsync();
-	
-		commitmentReader.awaitTerminated();
-		System.out.println("--------Terminated-----------");
-
-		
 	}
 }
