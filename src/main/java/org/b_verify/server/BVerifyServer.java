@@ -8,6 +8,8 @@ import org.b_verify.common.DummyProof;
 import org.b_verify.common.InsufficientFundsException;
 import org.b_verify.common.Proof;
 import org.catena.server.CatenaServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Responsible for managing server data structures, broadcasting commitments 
@@ -19,6 +21,9 @@ public class BVerifyServer implements BVerifyProtocolServer {
 	
 	private Registry registry;
 	private CatenaServer commitmentPublisher;
+
+	/** Debugging - use this instead of printing to Standard out **/
+    private static final Logger log = LoggerFactory.getLogger(BVerifyServer.class);
 	
 	public BVerifyServer(Registry registry, CatenaServer publisher) {
 		this.commitmentPublisher = publisher;
@@ -26,20 +31,23 @@ public class BVerifyServer implements BVerifyProtocolServer {
 	}
 
 	public boolean transfer(String userTo, String userFrom, int amount) throws InsufficientFundsException {
-		System.out.println(userFrom+" -- "+amount+" -- >"+userTo);
+		log.info("Transfer request recieved - userTo:"+userTo+" userFrom:"+userFrom+" amount: "+amount);
 		
 		try {
-            BVerifyProtocolClient clientTo = (BVerifyProtocolClient) this.registry.lookup(userTo);
-            Proof respTo = clientTo.proposeTransfer(userTo, userFrom, new DummyProof(userFrom+" -- "+amount+" -- >"+userTo));
-            System.out.println("Response from clientTo: ");
-            System.out.println(respTo);
-            BVerifyProtocolClient clientFrom = (BVerifyProtocolClient) this.registry.lookup(userFrom);
-            Proof respFrom = clientFrom.proposeTransfer(userTo, userFrom, new DummyProof(userFrom+" -- "+amount+" -- >"+userTo));
-            System.out.println("Response from clientFrom: ");
-            System.out.println(respFrom);
-            
-            // publish commitment 
+			String[] usersToContact = new String[] {userTo, userFrom};
+			// contact all users
+			for(String user : usersToContact) {
+				log.debug("Looking up "+user+" in java RMI registry");
+	            BVerifyProtocolClient client = (BVerifyProtocolClient) this.registry.lookup(user);
+				log.debug("Calling RMI method on "+user);
+	            Proof respTo = client.proposeTransfer(userTo, userFrom, 
+	            		new DummyProof(userFrom+" -- "+amount+" -- >"+userTo));
+	            log.info("Response from "+user+": "+respTo.toString());
+			}    
+			// for now assume all clients approve and publish commitment 
+            log.info("Transfer success");
             String stmt = "NEW COMMITMENT! " +System.currentTimeMillis();
+            log.info("Creating new commitment: "+stmt);
             commitmentPublisher.appendStatement(stmt.getBytes());
             return true;
             
@@ -50,10 +58,12 @@ public class BVerifyServer implements BVerifyProtocolServer {
 	}
 
 	public Proof getBalance(String user, int time) {
+		log.info("getBalance request recieved - user: "+user+" time: "+ time);
 		return new DummyProof(user+" balance at time: "+time);
 	}
 
 	public Proof getBalances(int time, boolean changedOnly) {
+		log.info("getBalances request recieved - time: "+ time+ " changedOnly: "+changedOnly);
 		return new DummyProof("user balances at time: "+time+" changed only: "+changedOnly);
 	}
 

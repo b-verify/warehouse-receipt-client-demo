@@ -1,13 +1,24 @@
 package org.b_verify.client;
 
-import org.eclipse.ui.forms.widgets.FormToolkit;
-
 import java.io.IOException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 
+import org.b_verify.common.InsufficientFundsException;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.widgets.*;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Table;
+import org.eclipse.swt.widgets.TableColumn;
+import org.eclipse.swt.widgets.TableItem;
+import org.eclipse.swt.widgets.Text;
+import org.eclipse.ui.forms.widgets.FormToolkit;
 
 
 
@@ -20,6 +31,10 @@ public class BVerifyClientGui {
 	// server config 
 	private Text serverAddress;
 	private Text serverTXID;
+	
+	// client config
+	private Text clientAddress;
+	private BVerifyClientApp bverifyclientapp;
 
 	private Label lblOutgoingHeader;
 	private Label lblOutgoingRecipientLabel;
@@ -96,7 +111,7 @@ public class BVerifyClientGui {
 		// Create User Configuration Information Section
 
 		// Create Outgoing Transfer Information Section
-		// createOutgoingTransferSection();
+		createOutgoingTransferSection();
 
 		// Create Incoming Transfer Information Section
 		// createIncomingTransferSection();
@@ -106,48 +121,58 @@ public class BVerifyClientGui {
 	}
 
 	/**
-	 * Sets up server onfiguration information section.
+	 * Sets up server configuration information section.
 	 */
 	private void createServerConfig() {
 		Label serverConfigHeader = new Label(shell, SWT.NONE);
 		serverConfigHeader.setAlignment(SWT.CENTER);
 		serverConfigHeader.setBounds(67, 10, 371, 19);
 		formToolkit.adapt(serverConfigHeader, true, true);
-		serverConfigHeader.setText("Server Configuration Information");
+		serverConfigHeader.setText("Configuration Information");
+		
+		Label clientAddressLabel = new Label(shell, SWT.NONE);
+		clientAddressLabel.setBounds(67, 35, 139, 19);
+		formToolkit.adapt(clientAddressLabel, true, true);
+		clientAddressLabel.setText("Client Address:");
 
 		Label serverAddressLabel = new Label(shell, SWT.NONE);
-		serverAddressLabel.setBounds(67, 35, 139, 19);
+		serverAddressLabel.setBounds(67, 60, 139, 19);
 		formToolkit.adapt(serverAddressLabel, true, true);
 		serverAddressLabel.setText("Server Address:");
 
 		Label serverTXIDLabel = new Label(shell, SWT.NONE);
-		serverTXIDLabel.setBounds(67, 60, 139, 19);
+		serverTXIDLabel.setBounds(67, 85, 139, 19);
 		formToolkit.adapt(serverTXIDLabel, true, true);
 		serverTXIDLabel.setText("Server TxID:");
 		
 		Label networkLabel = new Label(shell, SWT.NONE);
-		networkLabel.setBounds(67, 90, 139, 19);
+		networkLabel.setBounds(67, 120, 139, 19);
 		formToolkit.adapt(networkLabel, true, true);
 		networkLabel.setText("Network:");
 
+		clientAddress = new Text(shell, SWT.NONE);
+		clientAddress.setBounds(212, 35, 226, 19);
+		formToolkit.adapt(clientAddress, true, true);
+		clientAddress.setText("<---set once the sync is started --->");
+		
 		serverAddress = new Text(shell, SWT.NONE);
-		serverAddress.setBounds(212, 35, 226, 19);
+		serverAddress.setBounds(212, 60, 226, 19);
 		formToolkit.adapt(serverAddress, true, true);
 		serverAddress.setText("");
 
 		serverTXID = new Text(shell, SWT.NONE);
-		serverTXID.setBounds(212, 60, 226, 19);
+		serverTXID.setBounds(212, 85, 226, 19);
 		formToolkit.adapt(serverTXID, true, true);
 		serverTXID.setText("");
 
 		networkSelector = new Combo(shell, SWT.DROP_DOWN);
-		networkSelector.setBounds(212, 90, 226, 19);
+		networkSelector.setBounds(212, 120, 226, 19);
 		networkSelector.setItems(NETWORKS);
 		formToolkit.adapt(networkSelector);
 		
 		// start sync button
 		startSync = new Button(shell, SWT.NONE);
-		startSync.setBounds(67, 130, 226, 30);
+		startSync.setBounds(67, 150, 226, 30);
 		formToolkit.adapt(startSync, true, true);
 		startSync.setText("START SYNC");
 		
@@ -170,10 +195,19 @@ public class BVerifyClientGui {
 				String txid = serverTXID.getText();
 				configured = true;			
 				try {
-					BVerifyClientApp appThread = new BVerifyClientApp(address,
+					bverifyclientapp = new BVerifyClientApp(address,
 							txid, network, gui);
+					String clientName = bverifyclientapp.getClientName();
+					// update client name
+					display.asyncExec(new Runnable() {
+						@Override
+						public void run() {
+							clientAddress.setText(clientName);
+						}
+					});
+					
 					// start the client app asynchronously 
-					Thread tr = new Thread(appThread);
+					Thread tr = new Thread(bverifyclientapp);
 					tr.start();
 				} catch (IOException | AlreadyBoundException | NotBoundException e) {
 					e.printStackTrace();
@@ -208,32 +242,32 @@ public class BVerifyClientGui {
 	private void createOutgoingTransferSection() {
 		lblOutgoingHeader = new Label(shell, SWT.NONE);
 		lblOutgoingHeader.setAlignment(SWT.CENTER);
-		lblOutgoingHeader.setBounds(67, 102, 371, 19);
+		lblOutgoingHeader.setBounds(67, 200, 371, 19);
 		formToolkit.adapt(lblOutgoingHeader, true, true);
-		lblOutgoingHeader.setText("Outgoing Transfer Information");
+		lblOutgoingHeader.setText("Transfer");
 
 		lblOutgoingRecipientLabel = new Label(shell, SWT.NONE);
-		lblOutgoingRecipientLabel.setBounds(67, 127, 139, 19);
+		lblOutgoingRecipientLabel.setBounds(67, 230, 139, 19);
 		formToolkit.adapt(lblOutgoingRecipientLabel, true, true);
-		lblOutgoingRecipientLabel.setText("Recipient (PubKey):");
+		lblOutgoingRecipientLabel.setText("Recipient PubKey:");
 
 		lblOutgoingAmountLabel = new Label(shell, SWT.NONE);
-		lblOutgoingAmountLabel.setBounds(67, 152, 139, 18);
+		lblOutgoingAmountLabel.setBounds(67, 260, 139, 18);
 		formToolkit.adapt(lblOutgoingAmountLabel, true, true);
-		lblOutgoingAmountLabel.setText("Transfer Amount (Units):");
+		lblOutgoingAmountLabel.setText("Amount:");
 
 		txtOutgoingActualRecipient = new Text(shell, SWT.BORDER);
 		txtOutgoingActualRecipient.setText("recipientpublickey");
-		txtOutgoingActualRecipient.setBounds(212, 127, 226, 19);
+		txtOutgoingActualRecipient.setBounds(212, 230, 226, 19);
 		formToolkit.adapt(txtOutgoingActualRecipient, true, true);
 
 		txtOutgoingActualAmount = new Text(shell, SWT.BORDER);
 		txtOutgoingActualAmount.setText("1000");
-		txtOutgoingActualAmount.setBounds(212, 149, 226, 19);
+		txtOutgoingActualAmount.setBounds(212, 260, 226, 19);
 		formToolkit.adapt(txtOutgoingActualAmount, true, true);
 
 		Button btnOutgoingRequest = new Button(shell, SWT.NONE);
-		btnOutgoingRequest.setBounds(67, 176, 371, 19);
+		btnOutgoingRequest.setBounds(67, 300, 210, 25);
 		formToolkit.adapt(btnOutgoingRequest, true, true);
 		btnOutgoingRequest.setText("Request Transfer");
 
@@ -242,9 +276,13 @@ public class BVerifyClientGui {
 				// Call here to b_verify client to initiate transfer request with parameters
 				// recipient public key and amount.
 				String recipient = txtOutgoingActualRecipient.getText();
-				String amount = txtOutgoingActualAmount.getText();
-				txtOutgoingActualRecipient.setText("Request sent to: " + recipient);
-				txtOutgoingActualAmount.setText("Amount sent: " + amount);
+				int amount = Integer.parseInt(txtOutgoingActualAmount.getText());
+				try {
+					bverifyclientapp.startTransfer(recipient, amount);
+				} catch (RemoteException | InsufficientFundsException e) {
+					e.printStackTrace();
+				}
+				
 			}
 		};
 		btnOutgoingRequest.addListener(SWT.Selection, transferButtonListener);
@@ -321,10 +359,7 @@ public class BVerifyClientGui {
 		lblSyncLastVerifiedUpdateTxnHashValue = new Label(shell, SWT.NONE);
 		lblSyncLastVerifiedUpdateTxnHashValue.setBounds(212, 440, 226, 20);
 		formToolkit.adapt(lblSyncLastVerifiedUpdateTxnHashValue, true, true);
-		lblSyncLastVerifiedUpdateTxnHashValue.setText("N/A");
-
-
-		
+		lblSyncLastVerifiedUpdateTxnHashValue.setText("N/A");		
 	}
 	
 	/**

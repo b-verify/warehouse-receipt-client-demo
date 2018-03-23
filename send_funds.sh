@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ADDRESS_TO_FUND=mv8R7X8Q8Wz96FGjxxPdtBJRbxFnCc7Hof
+ADDRESS_TO_FUND=mgesAzJfaZuhbiF1ZDvoGNRbQBsdzGwVKE
 
 # generate 101 blocks to spend a coinbase tx 
 bitcoin-cli -regtest -datadir=regtest-data/ generate 101

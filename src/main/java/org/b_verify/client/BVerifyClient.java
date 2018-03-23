@@ -11,6 +11,8 @@ import org.b_verify.common.DummyProof;
 import org.b_verify.common.Proof;
 import org.catena.client.CatenaStatementListener;
 import org.catena.common.CatenaStatement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The client is responsible for keeping track of the balances of users by 
@@ -28,6 +30,10 @@ public class BVerifyClient implements BVerifyProtocolClient, CatenaStatementList
 	private final BVerifyProtocolServer server;
 	private final BVerifyClientGui appgui;
 	
+	/** Debugging - use this instead of printing to Standard out **/
+    private static final Logger log = LoggerFactory.getLogger(BVerifyClient.class);
+
+	
 	public BVerifyClient(String name, BVerifyProtocolServer srvr, BVerifyClientGui gui) {
 		appgui = gui;
 		commitments = new ArrayList<BVerifyCommitment>();
@@ -36,13 +42,14 @@ public class BVerifyClient implements BVerifyProtocolClient, CatenaStatementList
 	}
 	
 	public synchronized Proof proposeTransfer(String userTo, String userFrom, Proof proofOfUpdate) throws RemoteException {
-		System.out.println("Transfer Request Recieved:");
-		System.out.println(proofOfUpdate.toString());
+		log.info("Transfer request recieved - userTo:"+userTo+" userFrom:"+userFrom+" proof:"+proofOfUpdate.toString());
+		log.info("Approved Transfer Request");
 		return new DummyProof(this.clientName+" approves!");
 	}
 
 	@Override
 	public synchronized void onStatementAppended(CatenaStatement s) {
+		log.info("Commitment Added: "+s);
 		// add BVerify commitment 
 		int commitmentNumber = this.commitments.size()+1;
 		BVerifyCommitment commitment = new BVerifyCommitment(commitmentNumber, s.getData(), 
@@ -51,16 +58,16 @@ public class BVerifyClient implements BVerifyProtocolClient, CatenaStatementList
 		
 		
 		// ask server for a proof
-//		try {
-//			System.out.println("Asking server to prove commitment: "+commitment.toString());
-//			System.out.println(
-//					this.server.getBalance(this.clientName, commitmentNumber));
-//		} catch (RemoteException e) {
-//			e.printStackTrace();
-//		}
+		try {
+			log.debug("Asking server to prove commitment by making a getBalanceRequest");
+			Proof response = this.server.getBalance(this.clientName, commitmentNumber);
+			log.debug("Response: "+response);
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
 		
 		// assume it succeeds (for now)
-		
+		log.debug("Proof succeeded - commitment verified - updating ux");
 		// update the gui
 		appgui.updateCurrentCommitment(commitment.getCommitmentNumber(), new String(commitment.getCommitmentData()), 
 				commitment.getCommitmentTxnHash().toString());
@@ -70,7 +77,7 @@ public class BVerifyClient implements BVerifyProtocolClient, CatenaStatementList
 	public synchronized void onStatementWithdrawn(CatenaStatement s) {
 		// later need to implement this to deal with Reorgs, 
 		// for now - ignore
-		System.err.println("REORG - feature not implemented yet");
+		log.warn("REORG - feature not implemented yet - crashing program");
 		System.exit(1);		
 	}
 
