@@ -13,7 +13,6 @@ import java.util.Iterator;
 import org.b_verify.common.BVerifyProtocolClient;
 import org.b_verify.common.BVerifyProtocolServer;
 import org.b_verify.common.InsufficientFundsException;
-import org.b_verify.server.BVerifyServer;
 import org.b_verify.server.BVerifyServerApp;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;

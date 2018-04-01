@@ -7,6 +7,7 @@ import org.b_verify.common.BVerifyProtocolServer;
 import org.b_verify.common.DummyProof;
 import org.b_verify.common.InsufficientFundsException;
 import org.b_verify.common.Proof;
+import org.catena.common.CatenaUtils;
 import org.catena.server.CatenaServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +50,8 @@ public class BVerifyServer implements BVerifyProtocolServer {
             String stmt = "NEW COMMITMENT! " +System.currentTimeMillis();
             log.info("Creating new commitment: "+stmt);
             commitmentPublisher.appendStatement(stmt.getBytes());
+            // TODO - figure out how to best incorporate this.
+            CatenaUtils.generateBlockRegtest();
             return true;
             
 		}catch (Exception e){
