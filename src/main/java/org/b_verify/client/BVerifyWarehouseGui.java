@@ -257,6 +257,13 @@ public class BVerifyWarehouseGui {
 					textUnits.setText("");
 					textDate.setText("");
 					processIssuedReceipt(receiptMap);
+				} else {
+					// Display error message indicating missing fields.
+					int style = SWT.ICON_ERROR;				    
+				    MessageBox messageBox = new MessageBox(shell, style);
+				    messageBox.setText("WARNING");
+				    messageBox.setMessage("Missing receipt fields.");
+				    messageBox.open();
 				}
 			}
 		};
@@ -328,6 +335,9 @@ public class BVerifyWarehouseGui {
 					// Call server to void receipt.
 					// Reflect changes in all receipts table.
 					tableAllReceipts.remove(tableAllReceipts.getSelectionIndices());
+				    // Update last updated time.
+				    String currentTime = LocalDateTime.now().toString();
+				    lblLastUpdatedTime.setText(currentTime);
 			    }
 			}
 		};
