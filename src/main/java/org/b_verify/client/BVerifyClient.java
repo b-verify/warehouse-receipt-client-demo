@@ -71,6 +71,9 @@ public class BVerifyClient implements BVerifyProtocolClient, CatenaStatementList
 		// update the gui
 		appgui.updateCurrentCommitment(commitment.getCommitmentNumber(), new String(commitment.getCommitmentData()), 
 				commitment.getCommitmentTxnHash().toString());
+		
+		// update all user balances
+		
 	}
 
 	@Override

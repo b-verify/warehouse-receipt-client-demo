@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.util.HashMap;
 
 import org.b_verify.common.InsufficientFundsException;
 import org.eclipse.swt.SWT;
@@ -45,7 +46,7 @@ public class BVerifyClientGui {
 	private Label lblIncomingHeader;
 	private Table tableIncoming;
 	private Table tableAllUserBalances;
-
+	private HashMap<String, TableItem> currentTableMap = new HashMap<>();
 
 	private Label lblSyncStatus;
 	private Label lblSyncLastVerifiedUpdateDataLabel;
@@ -57,7 +58,6 @@ public class BVerifyClientGui {
 
 	
 	// configuration information (freeze this once started)
-	
 	private boolean configured;
 	private Combo networkSelector;
 	private Button startSync;
@@ -99,7 +99,7 @@ public class BVerifyClientGui {
 	protected void createContents() {
 		// Create Application Shell
 		shell = new Shell();
-		shell.setSize(500, 630);
+		shell.setSize(500, 700);
 		shell.setText("b_verify Client Application");
 
 		// create server config 
@@ -117,7 +117,7 @@ public class BVerifyClientGui {
 		// createIncomingTransferSection();
 
 		// Create All User Balances Information Section
-		//createAllUserBalancesSection();
+		createAllUserBalancesSection();
 	}
 
 	/**
@@ -233,9 +233,27 @@ public class BVerifyClientGui {
 		});
 	}
 	
+	// update should also be on GUI thread
+	public void updateUserBalances(HashMap<String, String> userBalancesMap) {
+		display.asyncExec(new Runnable() {
+			@Override
+			public void run() {
+				// Iterate over all user pubkey in userBalancesMap
+			    // Have hash map where keys are public keys of clients and values are references to table items
+			    // Once user balances are updated, find TableItem mapping to public key and update the setText with new balance
+				
+				// If public key is not present in current table, create table item
+				// Temporary table entry
+				TableItem item1 = new TableItem(tableAllUserBalances, SWT.NONE);
+			    item1.setText(new String[] { "currentUserPubKey", "User Balance"});
+			    
+				// Else get reference to table item and update balance text
+				// Temporary table entry
+				currentTableMap.get("currentUserPubKey").setText(new String[] { "currentUserPubKey", "Updated Balance"});
+			}
+		});
+	}
 	
-	
-
 	/**
 	 * Sets up the outgoing transfer information section.
 	 */
@@ -367,7 +385,7 @@ public class BVerifyClientGui {
 	 */
 	private void createAllUserBalancesSection() {
 		tableAllUserBalances = new Table(shell, SWT.BORDER | SWT.FULL_SELECTION);
-		tableAllUserBalances.setBounds(67, 373, 371, 153);
+		tableAllUserBalances.setBounds(67, 480, 371, 153);
 		formToolkit.adapt(tableAllUserBalances);
 		formToolkit.paintBordersFor(tableAllUserBalances);
 		tableAllUserBalances.setHeaderVisible(true);
@@ -382,10 +400,7 @@ public class BVerifyClientGui {
 		tblclmnAllUserBalance.setText("Balance");
 
 		// Temporary table entry
-		TableItem tableItemAllUserPublicKey = new TableItem(tableAllUserBalances, SWT.NONE);
-		tableItemAllUserPublicKey.setText(new String[] {});
-		tableItemAllUserPublicKey.setText("anotheruserpublickey");
-		
-
+		TableItem item1 = new TableItem(tableAllUserBalances, SWT.NONE);
+	    item1.setText(new String[] { "Column1 text", "Column2 text"});
 	}
 }

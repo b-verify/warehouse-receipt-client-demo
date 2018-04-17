@@ -77,7 +77,7 @@ public class BVerifyClientApp implements Runnable {
 		// conmponents 
 		bverifygui = gui;
 		commitmentReader = new CatenaClient(params, new File(directory), txid, addr, null);
-		// for now the reigstry is just on local host 
+		// for now the registry is just on local host 
 		// we will need to change this down the road
 		registry = LocateRegistry.getRegistry(null, BVerifyServerApp.RMI_REGISTRY_PORT);
 		bverifyserver = (BVerifyProtocolServer) registry.lookup("Server");
