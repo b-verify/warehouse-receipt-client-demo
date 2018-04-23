@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Font;
@@ -22,6 +21,7 @@ import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.forms.widgets.FormToolkit;
+import org.json.*;
 
 public class BVerifyWarehouseGui {
 
@@ -38,27 +38,29 @@ public class BVerifyWarehouseGui {
 	private Text textServerTxid;
 	private static final String[] NETWORKS = new String[] { "REGTEST", "TESTNET3", "MAINNET" };
 	private Button buttonSync;
-	private BVerifyClientApp bverifyclientapp;
+	private BVerifyWarehouseApp bverifywarehouseapp;
 
 	// process new receipt section variables
 	private Text textWarehouse;
 	private Text textAccountant;
 	private Text textOwner;
 	private Text textDepositor;
-	private Text textCategory;
+//	private Text textCategory;
+	private static final String[] CATEGORIES = new String[] { "corn", "soy", "wheat" };
 	private Text textDate;
-	private Text textInsurance;
+//	private Text textInsurance;
+	private static final String[] INSURANCES = new String[] { "full coverage", "against fire", "against theft", "not covered" };
 	private Text textWeight;
 	private Text textVolume;
-	private Text textQuantity;
+	private Text textHumidity;
 	private Text textPrice;
 	private Text textOtherDetails;
 	
 	// all receipts section variables
 	private Table tableAllReceipts;
 	private Label lblLastUpdatedTime;
-	private static final String[] ALL_RECEIPT_COLUMNS = {"Warehouse", "Accountant", "Owner", "Depositor", 
-			"Category", "Date", "Insurance", "Weight", "Volume", "Quantity", "Price", "Details"};
+	private static final String[] ALL_RECEIPT_COLUMNS = {"warehouse", "accountant", "owner", "depositor", 
+			"category", "date", "insurance", "weight", "volume", "humidity", "price", "details"};
 	private static final int ALL_RECEIPT_COLUMN_COUNT = ALL_RECEIPT_COLUMNS.length;
 	
 	/**
@@ -162,8 +164,43 @@ public class BVerifyWarehouseGui {
 		
 		// mark as starting not configured
 		configured = false;
-		
-		// create event listener for button and sync when clicked 
+
+		// creates a catena wallet and starts syncing!
+		BVerifyWarehouseGui gui = this;
+				
+		Listener startSyncListener = new Listener() {
+			public void handleEvent(Event event) {
+				if (configured) {
+					System.out.println("ALREADY CONFIGURED");
+				}
+				if (networkSelector.getSelectionIndex() == -1) {
+					System.out.println("NOTHING SELECTED - FAIL ");
+				}
+				String network = networkSelector.getText();
+				String address = textServerAddress.getText();
+				String txid = textServerTxid.getText();
+				configured = true;			
+				try {
+					bverifywarehouseapp = new BVerifyWarehouseApp(address, txid, network, gui);
+					String clientName = bverifywarehouseapp.getClientName();
+					// update client name
+					display.asyncExec(new Runnable() {
+						@Override
+						public void run() {
+							textClientAddress.setText(clientName);
+						}
+					});
+							
+					// start the client app asynchronously 
+					Thread tr = new Thread(bverifywarehouseapp);
+					tr.start();
+				} catch (IOException | AlreadyBoundException | NotBoundException e) {
+					e.printStackTrace();
+					System.exit(1);
+				}
+			}
+		};
+		buttonSync.addListener(SWT.Selection, startSyncListener);
 	}
 	
 	/**
@@ -172,7 +209,7 @@ public class BVerifyWarehouseGui {
 	private void createNewReceiptSection() {
 		Label lblProcessNewReceipt = new Label(shell, SWT.NONE);
 		lblProcessNewReceipt.setFont(sectionHeaderLabelFont);
-		lblProcessNewReceipt.setBounds(10, 131, 174, 24);
+		lblProcessNewReceipt.setBounds(10, 127, 174, 24);
 		lblProcessNewReceipt.setText("PROCESS NEW RECEIPT");
 		
 		Label labelWarehouse = new Label(shell, SWT.NONE);
@@ -220,8 +257,13 @@ public class BVerifyWarehouseGui {
 		labelCategory.setBounds(30, 280, 90, 24);
 		formToolkit.adapt(labelCategory, true, true);
 		
-		textCategory = new Text(shell, SWT.BORDER);
-		textCategory.setBounds(126, 280, 314, 24);
+		Combo categorySelector = new Combo(shell, SWT.DROP_DOWN);
+		categorySelector.setBounds(126, 280, 314, 24);
+		categorySelector.setItems(CATEGORIES);
+		formToolkit.adapt(categorySelector);
+		
+//		textCategory = new Text(shell, SWT.BORDER);
+//		textCategory.setBounds(126, 280, 314, 24);
 		
 		Label labelDate = new Label(shell, SWT.NONE);
 		labelDate.setText("Date:");
@@ -230,7 +272,7 @@ public class BVerifyWarehouseGui {
 		formToolkit.adapt(labelDate, true, true);
 		
 		textDate = new Text(shell, SWT.BORDER);
-		textDate.setText("DD/MM/YYYY");
+		textDate.setText("dd/mm/yyyy");
 		textDate.setBounds(126, 310, 314, 23);
 		
 		Label labelInsurance = new Label(shell, SWT.NONE);
@@ -239,9 +281,14 @@ public class BVerifyWarehouseGui {
 		labelInsurance.setBounds(480, 158, 90, 24);
 		formToolkit.adapt(labelInsurance, true, true);
 		
-		textInsurance = new Text(shell, SWT.BORDER);
-		textInsurance.setBounds(576, 158, 314, 24);
-		formToolkit.adapt(textInsurance, true, true);
+		Combo insuranceSelector = new Combo(shell, SWT.DROP_DOWN);
+		insuranceSelector.setBounds(576, 158, 314, 24);
+		insuranceSelector.setItems(INSURANCES);
+		formToolkit.adapt(insuranceSelector);
+		
+//		textInsurance = new Text(shell, SWT.BORDER);
+//		textInsurance.setBounds(576, 158, 314, 24);
+//		formToolkit.adapt(textInsurance, true, true);
 		
 		Label labelWeight = new Label(shell, SWT.NONE);
 		labelWeight.setText("Weight (kg):");
@@ -261,18 +308,18 @@ public class BVerifyWarehouseGui {
 		textVolume = new Text(shell, SWT.BORDER);
 		textVolume.setBounds(576, 218, 314, 24);
 		
-		Label labelQuanity = new Label(shell, SWT.NONE);
-		labelQuanity.setText("Quanity:");
-		labelQuanity.setFont(subHeaderLabelFont);
-		labelQuanity.setBounds(480, 248, 90, 24);
-		formToolkit.adapt(labelQuanity, true, true);
+		Label labelHumidity = new Label(shell, SWT.NONE);
+		labelHumidity.setText("Humidity (%):");
+		labelHumidity.setFont(subHeaderLabelFont);
+		labelHumidity.setBounds(480, 248, 90, 24);
+		formToolkit.adapt(labelHumidity, true, true);
 		
-		textQuantity = new Text(shell, SWT.BORDER);
-		textQuantity.setBounds(576, 248, 314, 24);
-		formToolkit.adapt(textQuantity, true, true);
+		textHumidity = new Text(shell, SWT.BORDER);
+		textHumidity.setBounds(576, 248, 314, 24);
+		formToolkit.adapt(textHumidity, true, true);
 		
 		Label labelPrice = new Label(shell, SWT.NONE);
-		labelPrice.setText("Price (EUR):");
+		labelPrice.setText("Price (USD):");
 		labelPrice.setFont(subHeaderLabelFont);
 		labelPrice.setBounds(480, 277, 90, 24);
 		formToolkit.adapt(labelPrice, true, true);
@@ -300,37 +347,57 @@ public class BVerifyWarehouseGui {
 			public void handleEvent(Event event) {
 				// Method with preset data labels.
 				if (!textWarehouse.getText().equals("") && !textAccountant.getText().equals("") && !textOwner.getText().equals("") 
-						&& !textDepositor.getText().equals("") && !textCategory.getText().equals("") && !textDate.getText().equals("")
-						&& !textInsurance.getText().equals("") && !textWeight.getText().equals("") && !textVolume.getText().equals("") 
-						&& !textQuantity.getText().equals("") && !textPrice.getText().equals("") && !textOtherDetails.getText().equals("")) {
-					HashMap<String, String> receiptMap = new HashMap<String, String>();
-					receiptMap.put("Warehouse", textWarehouse.getText());
-					receiptMap.put("Accountant", textAccountant.getText());
-					receiptMap.put("Owner", textOwner.getText());
-					receiptMap.put("Depositor", textDepositor.getText());
-					receiptMap.put("Category", textCategory.getText());
-					receiptMap.put("Date", textDate.getText());
-					receiptMap.put("Insurance", textInsurance.getText());
-					receiptMap.put("Weight", textWeight.getText());
-					receiptMap.put("Volume", textVolume.getText());
-					receiptMap.put("Quantity", textQuantity.getText());
-					receiptMap.put("Price", textPrice.getText());
-					receiptMap.put("Details", textOtherDetails.getText());
+						&& !textDepositor.getText().equals("") && !categorySelector.getText().equals("") && !textDate.getText().equals("")
+						&& !insuranceSelector.getText().equals("") && !textWeight.getText().equals("") && !textVolume.getText().equals("") 
+						&& !textHumidity.getText().equals("") && !textPrice.getText().equals("") && !textOtherDetails.getText().equals("")) {
+					
+					JSONObject receiptJSON = new JSONObject();
+			        receiptJSON.put("warehouse", textWarehouse.getText());
+					receiptJSON.put("accountant", textAccountant.getText());
+					receiptJSON.put("owner", textOwner.getText());
+					receiptJSON.put("depositor", textDepositor.getText());
+					receiptJSON.put("category", categorySelector.getText());
+					receiptJSON.put("date", textDate.getText());
+					receiptJSON.put("insurance", insuranceSelector.getText());
+					receiptJSON.put("weight", textWeight.getText());
+					receiptJSON.put("volume", textVolume.getText());
+					receiptJSON.put("humidity", textHumidity.getText());
+					receiptJSON.put("price", textPrice.getText());
+					receiptJSON.put("details", textOtherDetails.getText());
+			        
+//					HashMap<String, String> receiptMap = new HashMap<String, String>();
+//					receiptMap.put("warehouse", textWarehouse.getText());
+//					receiptMap.put("accountant", textAccountant.getText());
+//					receiptMap.put("owner", textOwner.getText());
+//					receiptMap.put("depositor", textDepositor.getText());
+//					receiptMap.put("category", categorySelector.getText());
+////					receiptMap.put("category", textCategory.getText());
+//					receiptMap.put("date", textDate.getText());
+//					receiptMap.put("insurance", insuranceSelector.getText());
+////					receiptMap.put("insurance", textInsurance.getText());
+//					receiptMap.put("weight", textWeight.getText());
+//					receiptMap.put("volume", textVolume.getText());
+//					receiptMap.put("humidity", textHumidity.getText());
+//					receiptMap.put("price", textPrice.getText());
+//					receiptMap.put("details", textOtherDetails.getText());
 					
 					textWarehouse.setText("");
 					textAccountant.setText("");
 					textOwner.setText("");
 					textDepositor.setText("");
-					textCategory.setText("");
-					textDate.setText("");
-					textInsurance.setText("");
+					categorySelector.setText("");
+//					textCategory.setText("");
+					textDate.setText("dd/mm/yyyy");
+					insuranceSelector.setText("");
+//					textInsurance.setText("");
 					textWeight.setText("");
 					textVolume.setText("");
-					textQuantity.setText("");
+					textHumidity.setText("");
 					textPrice.setText("");
-					textOtherDetails.setText("");
+					textOtherDetails.setText("n/a");
 					
-					processIssuedReceipt(receiptMap);
+					bverifywarehouseapp.startIssueReceipt(receiptJSON);
+					processIssuedReceipt(receiptJSON);
 				} else {
 					// Display error message indicating missing fields.
 					int style = SWT.ICON_ERROR;				    
@@ -350,11 +417,11 @@ public class BVerifyWarehouseGui {
 	private void createAllReceiptsSection() {
 		Label lblAllWarehouseReceipts = new Label(shell, SWT.NONE);
 		lblAllWarehouseReceipts.setFont(sectionHeaderLabelFont);
-		lblAllWarehouseReceipts.setBounds(10, 370, 174, 24);
+		lblAllWarehouseReceipts.setBounds(10, 375, 174, 24);
 		lblAllWarehouseReceipts.setText("WAREHOUSE RECEIPTS");
 		
 		tableAllReceipts = new Table(shell, SWT.BORDER | SWT.FULL_SELECTION);
-		tableAllReceipts.setBounds(10, 403, 880, 202);
+		tableAllReceipts.setBounds(10, 405, 880, 200);
 		tableAllReceipts.setHeaderVisible(true);
 		tableAllReceipts.setLinesVisible(true);
 		
@@ -394,9 +461,9 @@ public class BVerifyWarehouseGui {
 		tblclmnVolume.setWidth(62);
 		tblclmnVolume.setText("Volume");
 		
-		TableColumn tblclmnQuantity = new TableColumn(tableAllReceipts, SWT.CENTER);
-		tblclmnQuantity.setWidth(65);
-		tblclmnQuantity.setText("Quantity");
+		TableColumn tblclmnHumidity = new TableColumn(tableAllReceipts, SWT.CENTER);
+		tblclmnHumidity.setWidth(65);
+		tblclmnHumidity.setText("Humidity");
 		
 		TableColumn tblclmnPrice = new TableColumn(tableAllReceipts, SWT.CENTER);
 		tblclmnPrice.setWidth(64);
@@ -406,19 +473,18 @@ public class BVerifyWarehouseGui {
 		tblclmnOtherDetails.setWidth(89);
 		tblclmnOtherDetails.setText("Other Details");
 		
-		Button btnVoidSelectedReceipt = new Button(shell, SWT.NONE);
-		btnVoidSelectedReceipt.setBounds(10, 611, 187, 24);
-		btnVoidSelectedReceipt.setText("Void Selected Receipt");
+		Button btnRedeemSelectedReceipt = new Button(shell, SWT.NONE);
+		btnRedeemSelectedReceipt.setBounds(10, 611, 187, 24);
+		btnRedeemSelectedReceipt.setText("Redeem Selected Receipt");
 		
 		Label lblLastUpdated = new Label(shell, SWT.NONE);
 		lblLastUpdated.setFont(subHeaderLabelFont);
-		lblLastUpdated.setBounds(671, 611, 85, 24);
+		lblLastUpdated.setBounds(524, 611, 85, 24);
 		lblLastUpdated.setText("Last Updated:");
 		
 		lblLastUpdatedTime = new Label(shell, SWT.NONE);
-		lblLastUpdatedTime.setAlignment(SWT.RIGHT);
 		lblLastUpdated.setFont(subHeaderLabelFont);
-		lblLastUpdatedTime.setBounds(762, 611, 128, 24);
+		lblLastUpdatedTime.setBounds(615, 611, 275, 24);
 		lblLastUpdatedTime.setText("N/A");
 		
 		Listener voidReceiptButtonListener = new Listener() {
@@ -440,18 +506,18 @@ public class BVerifyWarehouseGui {
 			    }
 			}
 		};
-		btnVoidSelectedReceipt.addListener(SWT.Selection, voidReceiptButtonListener);
+		btnRedeemSelectedReceipt.addListener(SWT.Selection, voidReceiptButtonListener);
 	}
 	
 	/**
 	 * Process issued receipt for it to be reflected in all receipts table.
 	 * @param receiptMap map storing receipt data labels as keys and data values as values.
 	 */
-	private void processIssuedReceipt(HashMap<String, String> receiptMap) {
+	private void processIssuedReceipt(JSONObject receiptJSON) {
 		// Find new mappings of values to columns in all receipts table.
 		String[] dataValueIndices = new String[ALL_RECEIPT_COLUMN_COUNT];
 		for (int i=0; i< ALL_RECEIPT_COLUMN_COUNT; i++) {
-			String currentDataValue = receiptMap.get(ALL_RECEIPT_COLUMNS[i]);
+			String currentDataValue = receiptJSON.getString(ALL_RECEIPT_COLUMNS[i]);
 			dataValueIndices[i] = currentDataValue;
 		}
 		// Create and add table item to table.
@@ -463,10 +529,5 @@ public class BVerifyWarehouseGui {
 	    // Update last updated time.
 	    String currentTime = LocalDateTime.now().toString();
 	    lblLastUpdatedTime.setText(currentTime);
-	}
-
-	public void updateCurrentCommitment(int commitmentNumber, String string, String string2) {
-		// TODO Auto-generated method stub
-		
 	}
 }
