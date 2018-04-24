@@ -114,7 +114,7 @@ public class BVerifyWarehouseGui {
 		display.asyncExec(new Runnable() {
 			@Override
 			public void run() {
-				// Add new receipt
+				// Add new receipt or redeem receipt
 			}
 		});
 	}
@@ -384,15 +384,17 @@ public class BVerifyWarehouseGui {
 					byte[] requestIssueMessage;
 					try {
 						requestIssueMessage = receiptJSON.toString().getBytes("utf-8");
-//						bverifywarehouseapp.initIssueReceipt(requestIssueMessage);
+						bverifywarehouseapp.initIssueReceipt(requestIssueMessage);
+						
+						// Adds receipt to GUI, shoudl not actually do this until request is approved.
 						processIssuedReceipt(receiptJSON);
 					} catch (UnsupportedEncodingException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
-					} //catch (RemoteException e) {
-//						// TODO Auto-generated catch block
-//						e.printStackTrace();
-//					}
+					} catch (RemoteException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				} else {
 					// Display error message indicating missing fields.
 					int style = SWT.ICON_ERROR;				    
@@ -491,24 +493,27 @@ public class BVerifyWarehouseGui {
 			    messageBox.setMessage("Do you really want to void this receipt?");
 			    int response = messageBox.open();
 			    if (response == SWT.YES) {
-			    		// Get selected receipt in table.
+			    		// Get selected receiptJSON from table.
+			    		TableItem selectedItem = tableAllReceipts.getSelection()[0];
+					JSONObject receiptJSON = new JSONObject();
+			    		for (int i=0; i< ALL_RECEIPT_COLUMNS.length; i++) {
+			    			receiptJSON.put(ALL_RECEIPT_COLUMNS[i], selectedItem.getText(i));
+			    		}
 			    	
-			    	
-//					// Call server to void receipt.
-//		    			byte[] requestIssueMessage;
-//		    			try {
-//		    				requestIssueMessage = receiptJSON.toString().getBytes("utf-8");
-//		    				bverifywarehouseapp.initRedeemReceipt(requestIssueMessage);
-//		    			} catch (UnsupportedEncodingException e) {
-//		    				// TODO Auto-generated catch block
-//		    				e.printStackTrace();
-//		    			} catch (RemoteException e) {
-//		    				// TODO Auto-generated catch block
-//		    				e.printStackTrace();
-//		    			}
+					// Call server to void receipt.
+		    			byte[] requestIssueMessage;
+		    			try {
+		    				requestIssueMessage = receiptJSON.toString().getBytes("utf-8");
+		    				bverifywarehouseapp.initRedeemReceipt(requestIssueMessage);
+		    			} catch (UnsupportedEncodingException e) {
+		    				// TODO Auto-generated catch block
+		    				e.printStackTrace();
+		    			} catch (RemoteException e) {
+		    				// TODO Auto-generated catch block
+		    				e.printStackTrace();
+		    			}
 		    			
-					// Reflect changes in all receipts table.
-			    		System.out.println(tableAllReceipts.getSelectionIndices());
+					// Reflect changes in all receipts table. Should not actually do this until gets approved.
 					tableAllReceipts.remove(tableAllReceipts.getSelectionIndices());
 					
 				    // Update last updated time.
