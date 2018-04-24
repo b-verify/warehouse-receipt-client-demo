@@ -10,9 +10,8 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Iterator;
 
-import org.b_verify.common.BVerifyProtocolClient;
-import org.b_verify.common.BVerifyProtocolServer;
-import org.b_verify.common.InsufficientFundsException;
+import org.b_verify.common.BVerifyProtocolClientAPI;
+import org.b_verify.common.BVerifyProtocolServerAPI;
 import org.b_verify.server.BVerifyServerApp;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
@@ -23,7 +22,6 @@ import org.catena.client.CatenaClient;
 import org.catena.common.CatenaStatement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.json.*;
 
 /**
  * The main app is responsible for setting up and starting the client as well as
@@ -49,7 +47,7 @@ public class BVerifyWarehouseApp implements Runnable {
 	// components
 	private Registry registry;
 	private BVerifyWarehouse bverifywarehouse;
-	private BVerifyProtocolServer bverifyserver;
+	private BVerifyProtocolServerAPI bverifyserver;
 	private BVerifyWarehouseGui bverifygui;
 	private CatenaClient commitmentReader;
 	
@@ -80,20 +78,23 @@ public class BVerifyWarehouseApp implements Runnable {
 		// for now the registry is just on local host 
 		// we will need to change this down the road
 		registry = LocateRegistry.getRegistry(null, BVerifyServerApp.RMI_REGISTRY_PORT);
-		bverifyserver = (BVerifyProtocolServer) registry.lookup("Server");
+		bverifyserver = (BVerifyProtocolServerAPI) registry.lookup("Server");
 		bverifywarehouse = new BVerifyWarehouse(clientAddress.toBase58(), bverifyserver, bverifygui);
 
 		
-		BVerifyProtocolClient clientStub = (BVerifyProtocolClient) UnicastRemoteObject.exportObject(bverifywarehouse, 0);
+		BVerifyProtocolClientAPI clientStub = (BVerifyProtocolClientAPI) UnicastRemoteObject.exportObject(bverifywarehouse, 0);
 		// clients are registered by their pubkeyhash
 		registry.bind(clientName, clientStub);
 		
 		log.info("b_verify client ready");
-
 	}
 	
-	public boolean startIssueReceipt(JSONObject receiptJSON) throws RemoteException {
-		return bverifyserver.issueReceipt(receiptJSON);
+	public void initIssueReceipt(byte[] requestIssueMessage) throws RemoteException {
+		bverifyserver.startIssueReceipt(requestIssueMessage);
+	}
+	
+	public void initRedeemReceipt(byte[] requestIssueMessage) throws RemoteException {
+		bverifyserver.startRedeemReceipt(requestIssueMessage);
 	}
 	
 	public String getClientName() {

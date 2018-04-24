@@ -5,8 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.b_verify.common.BVerifyCommitment;
-import org.b_verify.common.BVerifyProtocolClient;
-import org.b_verify.common.BVerifyProtocolServer;
+import org.b_verify.common.BVerifyProtocolClientAPI;
+import org.b_verify.common.BVerifyProtocolServerAPI;
 import org.b_verify.common.DummyProof;
 import org.b_verify.common.Proof;
 import org.catena.client.CatenaStatementListener;
@@ -22,30 +22,41 @@ import org.slf4j.LoggerFactory;
  * 
  * @author binhle
  */
-public class BVerifyWarehouse implements BVerifyProtocolClient, CatenaStatementListener {
+public class BVerifyWarehouse implements BVerifyProtocolClientAPI, CatenaStatementListener {
 
 	private final List<BVerifyCommitment> commitments;
 	private final String clientName;
-	private final BVerifyProtocolServer server;
+	private final BVerifyProtocolServerAPI server;
 	private final BVerifyWarehouseGui appgui;
 	
 	/** Debugging - use this instead of printing to Standard out **/
     private static final Logger log = LoggerFactory.getLogger(BVerifyClient.class);
 
-	
-	public BVerifyWarehouse(String name, BVerifyProtocolServer srvr, BVerifyWarehouseGui gui) {
+	public BVerifyWarehouse(String name, BVerifyProtocolServerAPI srvr, BVerifyWarehouseGui gui) {
 		appgui = gui;
 		commitments = new ArrayList<BVerifyCommitment>();
         clientName = name;
         server = srvr;
 	}
-	
-	public synchronized Proof proposeTransfer(String userTo, String userFrom, Proof proofOfUpdate) throws RemoteException {
-		log.info("Transfer request recieved - userTo:"+userTo+" userFrom:"+userFrom+" proof:"+proofOfUpdate.toString());
-		log.info("Approved Transfer Request");
-		return new DummyProof(this.clientName+" approves!");
+
+	@Override
+	public byte[] approveReceiptIssue(byte[] approveIssueMessage) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
+	@Override
+	public byte[] approveReceiptRedeem(byte[] approveRedeemMessage) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public byte[] approveReceiptTransfer(byte[] approveTransferMessage) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
 	@Override
 	public synchronized void onStatementAppended(CatenaStatement s) {
 		log.info("Commitment Added: "+s);
@@ -57,18 +68,18 @@ public class BVerifyWarehouse implements BVerifyProtocolClient, CatenaStatementL
 		
 		
 		// ask server for a proof
-		try {
-			log.debug("Asking server to prove commitment by making a getBalanceRequest");
-			Proof response = this.server.getBalance(this.clientName, commitmentNumber);
-			log.debug("Response: "+response);
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
+//		try {
+//			log.debug("Asking server to prove commitment by making a getBalanceRequest");
+//			Proof response = this.server.getUpdates(updateRequest);
+//			log.debug("Response: "+response);
+//		} catch (RemoteException e) {
+//			e.printStackTrace();
+//		}
 		
 		// assume it succeeds (for now)
 		log.debug("Proof succeeded - commitment verified - updating ux");
 		// update the gui
-		//appgui.updateCurrentCommitment(commitment.getCommitmentNumber(), new String(commitment.getCommitmentData()),commitment.getCommitmentTxnHash().toString());		
+		appgui.updateCurrentCommitment(commitment.getCommitmentNumber(), new String(commitment.getCommitmentData()),commitment.getCommitmentTxnHash().toString());		
 	}
 
 	@Override
@@ -78,5 +89,4 @@ public class BVerifyWarehouse implements BVerifyProtocolClient, CatenaStatementL
 		log.warn("REORG - feature not implemented yet - crashing program");
 		System.exit(1);		
 	}
-
 }

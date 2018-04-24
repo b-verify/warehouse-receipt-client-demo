@@ -1,8 +1,10 @@
 package org.b_verify.client;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.time.LocalDateTime;
 
 import org.eclipse.swt.SWT;
@@ -45,10 +47,8 @@ public class BVerifyWarehouseGui {
 	private Text textAccountant;
 	private Text textOwner;
 	private Text textDepositor;
-//	private Text textCategory;
 	private static final String[] CATEGORIES = new String[] { "corn", "soy", "wheat" };
 	private Text textDate;
-//	private Text textInsurance;
 	private static final String[] INSURANCES = new String[] { "full coverage", "against fire", "against theft", "not covered" };
 	private Text textWeight;
 	private Text textVolume;
@@ -107,6 +107,16 @@ public class BVerifyWarehouseGui {
 		
 		// Create All Warehouse Receipts Section
 		createAllReceiptsSection();
+	}
+	
+	// all updates to GUI must be scheduled via the GUI thread 
+	public void updateCurrentCommitment(int newCommitmentNumber, String newCommitmentData, String newCommitmentTxnHash) {
+		display.asyncExec(new Runnable() {
+			@Override
+			public void run() {
+				// Add new receipt
+			}
+		});
 	}
 	
 	/**
@@ -262,9 +272,6 @@ public class BVerifyWarehouseGui {
 		categorySelector.setItems(CATEGORIES);
 		formToolkit.adapt(categorySelector);
 		
-//		textCategory = new Text(shell, SWT.BORDER);
-//		textCategory.setBounds(126, 280, 314, 24);
-		
 		Label labelDate = new Label(shell, SWT.NONE);
 		labelDate.setText("Date:");
 		labelDate.setFont(subHeaderLabelFont);
@@ -285,10 +292,6 @@ public class BVerifyWarehouseGui {
 		insuranceSelector.setBounds(576, 158, 314, 24);
 		insuranceSelector.setItems(INSURANCES);
 		formToolkit.adapt(insuranceSelector);
-		
-//		textInsurance = new Text(shell, SWT.BORDER);
-//		textInsurance.setBounds(576, 158, 314, 24);
-//		formToolkit.adapt(textInsurance, true, true);
 		
 		Label labelWeight = new Label(shell, SWT.NONE);
 		labelWeight.setText("Weight (kg):");
@@ -364,40 +367,32 @@ public class BVerifyWarehouseGui {
 					receiptJSON.put("humidity", textHumidity.getText());
 					receiptJSON.put("price", textPrice.getText());
 					receiptJSON.put("details", textOtherDetails.getText());
-			        
-//					HashMap<String, String> receiptMap = new HashMap<String, String>();
-//					receiptMap.put("warehouse", textWarehouse.getText());
-//					receiptMap.put("accountant", textAccountant.getText());
-//					receiptMap.put("owner", textOwner.getText());
-//					receiptMap.put("depositor", textDepositor.getText());
-//					receiptMap.put("category", categorySelector.getText());
-////					receiptMap.put("category", textCategory.getText());
-//					receiptMap.put("date", textDate.getText());
-//					receiptMap.put("insurance", insuranceSelector.getText());
-////					receiptMap.put("insurance", textInsurance.getText());
-//					receiptMap.put("weight", textWeight.getText());
-//					receiptMap.put("volume", textVolume.getText());
-//					receiptMap.put("humidity", textHumidity.getText());
-//					receiptMap.put("price", textPrice.getText());
-//					receiptMap.put("details", textOtherDetails.getText());
-					
+			     
 					textWarehouse.setText("");
 					textAccountant.setText("");
 					textOwner.setText("");
 					textDepositor.setText("");
 					categorySelector.setText("");
-//					textCategory.setText("");
 					textDate.setText("dd/mm/yyyy");
 					insuranceSelector.setText("");
-//					textInsurance.setText("");
 					textWeight.setText("");
 					textVolume.setText("");
 					textHumidity.setText("");
 					textPrice.setText("");
 					textOtherDetails.setText("n/a");
 					
-					bverifywarehouseapp.startIssueReceipt(receiptJSON);
-					processIssuedReceipt(receiptJSON);
+					byte[] requestIssueMessage;
+					try {
+						requestIssueMessage = receiptJSON.toString().getBytes("utf-8");
+//						bverifywarehouseapp.initIssueReceipt(requestIssueMessage);
+						processIssuedReceipt(receiptJSON);
+					} catch (UnsupportedEncodingException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} //catch (RemoteException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
 				} else {
 					// Display error message indicating missing fields.
 					int style = SWT.ICON_ERROR;				    
@@ -487,7 +482,7 @@ public class BVerifyWarehouseGui {
 		lblLastUpdatedTime.setBounds(615, 611, 275, 24);
 		lblLastUpdatedTime.setText("N/A");
 		
-		Listener voidReceiptButtonListener = new Listener() {
+		Listener redeemReceiptButtonListener = new Listener() {
 			public void handleEvent(Event event) {
 				// Get confirmation from user.
 				MessageBox messageBox = new MessageBox(shell, SWT.ICON_QUESTION
@@ -497,16 +492,32 @@ public class BVerifyWarehouseGui {
 			    int response = messageBox.open();
 			    if (response == SWT.YES) {
 			    		// Get selected receipt in table.
-					// Call server to void receipt.
+			    	
+			    	
+//					// Call server to void receipt.
+//		    			byte[] requestIssueMessage;
+//		    			try {
+//		    				requestIssueMessage = receiptJSON.toString().getBytes("utf-8");
+//		    				bverifywarehouseapp.initRedeemReceipt(requestIssueMessage);
+//		    			} catch (UnsupportedEncodingException e) {
+//		    				// TODO Auto-generated catch block
+//		    				e.printStackTrace();
+//		    			} catch (RemoteException e) {
+//		    				// TODO Auto-generated catch block
+//		    				e.printStackTrace();
+//		    			}
+		    			
 					// Reflect changes in all receipts table.
+			    		System.out.println(tableAllReceipts.getSelectionIndices());
 					tableAllReceipts.remove(tableAllReceipts.getSelectionIndices());
+					
 				    // Update last updated time.
 				    String currentTime = LocalDateTime.now().toString();
 				    lblLastUpdatedTime.setText(currentTime);
 			    }
 			}
 		};
-		btnRedeemSelectedReceipt.addListener(SWT.Selection, voidReceiptButtonListener);
+		btnRedeemSelectedReceipt.addListener(SWT.Selection, redeemReceiptButtonListener);
 	}
 	
 	/**
