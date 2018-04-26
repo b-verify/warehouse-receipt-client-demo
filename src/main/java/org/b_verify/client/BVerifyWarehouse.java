@@ -30,7 +30,7 @@ public class BVerifyWarehouse implements BVerifyProtocolClientAPI, CatenaStateme
 	private final BVerifyWarehouseGui appgui;
 	
 	/** Debugging - use this instead of printing to Standard out **/
-    private static final Logger log = LoggerFactory.getLogger(BVerifyClient.class);
+    private static final Logger log = LoggerFactory.getLogger(BVerifyWarehouse.class);
 
 	public BVerifyWarehouse(String name, BVerifyProtocolServerAPI srvr, BVerifyWarehouseGui gui) {
 		appgui = gui;
@@ -41,19 +41,19 @@ public class BVerifyWarehouse implements BVerifyProtocolClientAPI, CatenaStateme
 
 	@Override
 	public byte[] approveReceiptIssue(byte[] approveIssueMessage) {
-		// TODO Auto-generated method stub
+//		MockClient.approveReceiptIssue(approveIssueMessage);
 		return null;
 	}
 
 	@Override
 	public byte[] approveReceiptRedeem(byte[] approveRedeemMessage) {
-		// TODO Auto-generated method stub
+//		MockClient.approveReceiptRedeem(approveRedeemMessage);
 		return null;
 	}
 
 	@Override
 	public byte[] approveReceiptTransfer(byte[] approveTransferMessage) {
-		// TODO Auto-generated method stub
+//		MockClient.approveReceiptTransfer(approveTransferMessage);
 		return null;
 	}
 	

@@ -47,8 +47,10 @@ public class BVerifyWarehouseGui {
 	private Text textAccountant;
 	private Text textOwner;
 	private Text textDepositor;
+	private Combo categorySelector;
 	private static final String[] CATEGORIES = new String[] { "corn", "soy", "wheat" };
 	private Text textDate;
+	private Combo insuranceSelector;
 	private static final String[] INSURANCES = new String[] { "full coverage", "against fire", "against theft", "not covered" };
 	private Text textWeight;
 	private Text textVolume;
@@ -267,7 +269,7 @@ public class BVerifyWarehouseGui {
 		labelCategory.setBounds(30, 280, 90, 24);
 		formToolkit.adapt(labelCategory, true, true);
 		
-		Combo categorySelector = new Combo(shell, SWT.DROP_DOWN);
+		categorySelector = new Combo(shell, SWT.DROP_DOWN);
 		categorySelector.setBounds(126, 280, 314, 24);
 		categorySelector.setItems(CATEGORIES);
 		formToolkit.adapt(categorySelector);
@@ -288,7 +290,7 @@ public class BVerifyWarehouseGui {
 		labelInsurance.setBounds(480, 158, 90, 24);
 		formToolkit.adapt(labelInsurance, true, true);
 		
-		Combo insuranceSelector = new Combo(shell, SWT.DROP_DOWN);
+		insuranceSelector = new Combo(shell, SWT.DROP_DOWN);
 		insuranceSelector.setBounds(576, 158, 314, 24);
 		insuranceSelector.setItems(INSURANCES);
 		formToolkit.adapt(insuranceSelector);
@@ -354,43 +356,16 @@ public class BVerifyWarehouseGui {
 						&& !insuranceSelector.getText().equals("") && !textWeight.getText().equals("") && !textVolume.getText().equals("") 
 						&& !textHumidity.getText().equals("") && !textPrice.getText().equals("") && !textOtherDetails.getText().equals("")) {
 					
-					JSONObject receiptJSON = new JSONObject();
-			        receiptJSON.put("warehouse", textWarehouse.getText());
-					receiptJSON.put("accountant", textAccountant.getText());
-					receiptJSON.put("owner", textOwner.getText());
-					receiptJSON.put("depositor", textDepositor.getText());
-					receiptJSON.put("category", categorySelector.getText());
-					receiptJSON.put("date", textDate.getText());
-					receiptJSON.put("insurance", insuranceSelector.getText());
-					receiptJSON.put("weight", textWeight.getText());
-					receiptJSON.put("volume", textVolume.getText());
-					receiptJSON.put("humidity", textHumidity.getText());
-					receiptJSON.put("price", textPrice.getText());
-					receiptJSON.put("details", textOtherDetails.getText());
-			     
-					textWarehouse.setText("");
-					textAccountant.setText("");
-					textOwner.setText("");
-					textDepositor.setText("");
-					categorySelector.setText("");
-					textDate.setText("dd/mm/yyyy");
-					insuranceSelector.setText("");
-					textWeight.setText("");
-					textVolume.setText("");
-					textHumidity.setText("");
-					textPrice.setText("");
-					textOtherDetails.setText("n/a");
+					JSONObject receiptJSON = createJsonFromReceiptFields();
+					resetProcessNewReceiptFields();
 					
-					byte[] requestIssueMessage;
 					try {
-						requestIssueMessage = receiptJSON.toString().getBytes("utf-8");
-						bverifywarehouseapp.initIssueReceipt(requestIssueMessage);
-						
-						// Adds receipt to GUI, shoudl not actually do this until request is approved.
+						bverifywarehouseapp.initIssueReceipt(receiptJSON);
+						// Adds receipt to GUI, should not actually do this until request is approved.
 						processIssuedReceipt(receiptJSON);
-					} catch (UnsupportedEncodingException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+	    				} catch (UnsupportedEncodingException e) {
+	    					// TODO Auto-generated catch block
+	    					e.printStackTrace();
 					} catch (RemoteException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -406,6 +381,44 @@ public class BVerifyWarehouseGui {
 			}
 		};
 		btnIssueNewReceipt.addListener(SWT.Selection, issueReceiptButtonListener);
+	}
+	
+	/**
+	 * Creates JSONObject from the entries in the process new receipt fields.
+	 * @return JSONObject with data from receipt fields.
+	 */
+	private JSONObject createJsonFromReceiptFields() {
+		JSONObject obj = new JSONObject();
+        obj.put("warehouse", textWarehouse.getText());
+        obj.put("accountant", textAccountant.getText());
+        obj.put("owner", textOwner.getText());
+        obj.put("depositor", textDepositor.getText());
+        obj.put("category", categorySelector.getText());
+        obj.put("date", textDate.getText());
+        obj.put("insurance", insuranceSelector.getText());
+        obj.put("weight", textWeight.getText());
+        obj.put("volume", textVolume.getText());
+        obj.put("humidity", textHumidity.getText());
+        obj.put("price", textPrice.getText());
+        obj.put("details", textOtherDetails.getText());
+        return obj;
+	}
+	/**
+	 * Resets the entries in the process new receipt fields.
+	 */
+	private void resetProcessNewReceiptFields() {
+		textWarehouse.setText("");
+		textAccountant.setText("");
+		textOwner.setText("");
+		textDepositor.setText("");
+		categorySelector.setText("");
+		textDate.setText("dd/mm/yyyy");
+		insuranceSelector.setText("");
+		textWeight.setText("");
+		textVolume.setText("");
+		textHumidity.setText("");
+		textPrice.setText("");
+		textOtherDetails.setText("n/a");
 	}
 	
 	/**
@@ -501,10 +514,8 @@ public class BVerifyWarehouseGui {
 			    		}
 			    	
 					// Call server to void receipt.
-		    			byte[] requestIssueMessage;
 		    			try {
-		    				requestIssueMessage = receiptJSON.toString().getBytes("utf-8");
-		    				bverifywarehouseapp.initRedeemReceipt(requestIssueMessage);
+		    				bverifywarehouseapp.initRedeemReceipt(receiptJSON);
 		    			} catch (UnsupportedEncodingException e) {
 		    				// TODO Auto-generated catch block
 		    				e.printStackTrace();

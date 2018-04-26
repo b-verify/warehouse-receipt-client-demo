@@ -2,6 +2,7 @@ package org.b_verify.client;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -22,6 +23,7 @@ import org.catena.client.CatenaClient;
 import org.catena.common.CatenaStatement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.json.*;
 
 /**
  * The main app is responsible for setting up and starting the client as well as
@@ -89,11 +91,42 @@ public class BVerifyWarehouseApp implements Runnable {
 		log.info("b_verify client ready");
 	}
 	
-	public void initIssueReceipt(byte[] requestIssueMessage) throws RemoteException {
+	public void initIssueReceipt(JSONObject receiptJSON) throws RemoteException, UnsupportedEncodingException {
+		byte[] requestIssueMessage = receiptJSON.toString().getBytes("utf-8");
+		// Build protobuf receipt issue message
+//		Receipt receipt =
+//				Receipt.newBuilder()
+//				.setAccountant(receiptJSON.get("accountant"))
+//				.setDepositor(receiptJSON.get("depositor"))
+//				.setCategory(receiptJSON.get("category"))
+//				.setDate(receiptJSON.get("date"))
+//				.setInsurance(receiptJSON.get("insurance"))
+//				.setWeight((double)receiptJSON.get("weight"))
+//				.setVolume((double)receiptJSON.get("volume"))
+//				.setHumidity((double)receiptJSON.get("humidity"))
+//				.setPrice((double)receiptJSON.get("price"))
+//				.setDetails(receiptJSON.get("details"))
+//				.build();
+//		IssueReceiptRequest requestIssueMessage = 
+//				IssueReceiptRequest.newBuilder()
+//				// Need to translate string names into id
+//				.setIssuerId(receiptJSON.get("warehouse"))
+//			    .setRecepientId(receiptJSON.get("owner"))
+//			    .setReceipt(receipt)
+//			    .build();
 		bverifyserver.startIssueReceipt(requestIssueMessage);
 	}
 	
-	public void initRedeemReceipt(byte[] requestIssueMessage) throws RemoteException {
+	public void initRedeemReceipt(JSONObject receiptJSON) throws RemoteException, UnsupportedEncodingException {
+		byte[] requestIssueMessage = receiptJSON.toString().getBytes("utf-8");
+		// Build protobuf receipt redeem message
+//		IssueReceiptRequest requestIssueMessage = 
+//				IssueReceiptRequest.newBuilder()
+//				// Need to translate string names into id and hash receipt
+//				.setIssuerId(receiptJSON.get("warehouse"))
+//			    .setRecepientId(receiptJSON.get("owner"))
+//			    .setReceiptHash()
+//			    .build();		
 		bverifyserver.startRedeemReceipt(requestIssueMessage);
 	}
 	
