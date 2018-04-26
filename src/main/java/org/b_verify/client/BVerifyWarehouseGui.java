@@ -43,9 +43,9 @@ public class BVerifyWarehouseGui {
 	private BVerifyWarehouseApp bverifywarehouseapp;
 
 	// process new receipt section variables
-	private Text textWarehouse;
+	private Text textIssuer;
 	private Text textAccountant;
-	private Text textOwner;
+	private Text textRecipient;
 	private Text textDepositor;
 	private Combo categorySelector;
 	private static final String[] CATEGORIES = new String[] { "corn", "soy", "wheat" };
@@ -61,7 +61,7 @@ public class BVerifyWarehouseGui {
 	// all receipts section variables
 	private Table tableAllReceipts;
 	private Label lblLastUpdatedTime;
-	private static final String[] ALL_RECEIPT_COLUMNS = {"warehouse", "accountant", "owner", "depositor", 
+	private static final String[] ALL_RECEIPT_COLUMNS = {"issuer", "accountant", "recipient", "depositor", 
 			"category", "date", "insurance", "weight", "volume", "humidity", "price", "details"};
 	private static final int ALL_RECEIPT_COLUMN_COUNT = ALL_RECEIPT_COLUMNS.length;
 	
@@ -224,15 +224,15 @@ public class BVerifyWarehouseGui {
 		lblProcessNewReceipt.setBounds(10, 127, 174, 24);
 		lblProcessNewReceipt.setText("PROCESS NEW RECEIPT");
 		
-		Label labelWarehouse = new Label(shell, SWT.NONE);
-		labelWarehouse.setText("Warehouse:");
-		labelWarehouse.setFont(subHeaderLabelFont);
-		labelWarehouse.setBounds(30, 161, 90, 24);
-		formToolkit.adapt(labelWarehouse, true, true);
+		Label labelIssuer = new Label(shell, SWT.NONE);
+		labelIssuer.setText("Issuer:");
+		labelIssuer.setFont(subHeaderLabelFont);
+		labelIssuer.setBounds(30, 161, 90, 24);
+		formToolkit.adapt(labelIssuer, true, true);
 		
-		textWarehouse = new Text(shell, SWT.BORDER);
-		textWarehouse.setBounds(126, 161, 314, 24);
-		formToolkit.adapt(textWarehouse, true, true);
+		textIssuer = new Text(shell, SWT.BORDER);
+		textIssuer.setBounds(126, 161, 314, 24);
+		formToolkit.adapt(textIssuer, true, true);
 		
 		Label labelAccountant = new Label(shell, SWT.NONE);
 		labelAccountant.setText("Accountant:");
@@ -244,14 +244,14 @@ public class BVerifyWarehouseGui {
 		textAccountant.setBounds(126, 191, 314, 24);
 		formToolkit.adapt(textAccountant, true, true);
 		
-		Label labelOwner = new Label(shell, SWT.NONE);
-		labelOwner.setText("Owner:");
-		labelOwner.setFont(subHeaderLabelFont);
-		labelOwner.setBounds(30, 221, 90, 24);
-		formToolkit.adapt(labelOwner, true, true);
+		Label labelRecipient = new Label(shell, SWT.NONE);
+		labelRecipient.setText("Recipient:");
+		labelRecipient.setFont(subHeaderLabelFont);
+		labelRecipient.setBounds(30, 221, 90, 24);
+		formToolkit.adapt(labelRecipient, true, true);
 		
-		textOwner = new Text(shell, SWT.BORDER);
-		textOwner.setBounds(126, 221, 314, 24);
+		textRecipient = new Text(shell, SWT.BORDER);
+		textRecipient.setBounds(126, 221, 314, 24);
 		
 		Label labelDepositor = new Label(shell, SWT.NONE);
 		labelDepositor.setText("Depositor:");
@@ -351,25 +351,25 @@ public class BVerifyWarehouseGui {
 		Listener issueReceiptButtonListener = new Listener() {
 			public void handleEvent(Event event) {
 				// Method with preset data labels.
-				if (!textWarehouse.getText().equals("") && !textAccountant.getText().equals("") && !textOwner.getText().equals("") 
+				if (!textIssuer.getText().equals("") && !textAccountant.getText().equals("") && !textRecipient.getText().equals("") 
 						&& !textDepositor.getText().equals("") && !categorySelector.getText().equals("") && !textDate.getText().equals("")
 						&& !insuranceSelector.getText().equals("") && !textWeight.getText().equals("") && !textVolume.getText().equals("") 
 						&& !textHumidity.getText().equals("") && !textPrice.getText().equals("") && !textOtherDetails.getText().equals("")) {
 					
 					JSONObject receiptJSON = createJsonFromReceiptFields();
 					resetProcessNewReceiptFields();
-					
-					try {
-						bverifywarehouseapp.initIssueReceipt(receiptJSON);
-						// Adds receipt to GUI, should not actually do this until request is approved.
-						processIssuedReceipt(receiptJSON);
-	    				} catch (UnsupportedEncodingException e) {
-	    					// TODO Auto-generated catch block
-	    					e.printStackTrace();
-					} catch (RemoteException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+					processIssuedReceipt(receiptJSON);
+//					try {
+//						bverifywarehouseapp.initIssueReceipt(receiptJSON);
+//						// Adds receipt to GUI, should not actually do this until request is approved.
+//						processIssuedReceipt(receiptJSON);
+//	    				} catch (UnsupportedEncodingException e) {
+//	    					// TODO Auto-generated catch block
+//	    					e.printStackTrace();
+//					} catch (RemoteException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
 				} else {
 					// Display error message indicating missing fields.
 					int style = SWT.ICON_ERROR;				    
@@ -389,9 +389,9 @@ public class BVerifyWarehouseGui {
 	 */
 	private JSONObject createJsonFromReceiptFields() {
 		JSONObject obj = new JSONObject();
-        obj.put("warehouse", textWarehouse.getText());
+        obj.put("issuer", textIssuer.getText());
         obj.put("accountant", textAccountant.getText());
-        obj.put("owner", textOwner.getText());
+        obj.put("recipient", textRecipient.getText());
         obj.put("depositor", textDepositor.getText());
         obj.put("category", categorySelector.getText());
         obj.put("date", textDate.getText());
@@ -407,9 +407,9 @@ public class BVerifyWarehouseGui {
 	 * Resets the entries in the process new receipt fields.
 	 */
 	private void resetProcessNewReceiptFields() {
-		textWarehouse.setText("");
+		textIssuer.setText("");
 		textAccountant.setText("");
-		textOwner.setText("");
+		textRecipient.setText("");
 		textDepositor.setText("");
 		categorySelector.setText("");
 		textDate.setText("dd/mm/yyyy");
@@ -435,17 +435,17 @@ public class BVerifyWarehouseGui {
 		tableAllReceipts.setHeaderVisible(true);
 		tableAllReceipts.setLinesVisible(true);
 		
-		TableColumn tblclmnWarehouse = new TableColumn(tableAllReceipts, SWT.CENTER);
-		tblclmnWarehouse.setWidth(82);
-		tblclmnWarehouse.setText("Warehouse");
+		TableColumn tblclmnIssuer = new TableColumn(tableAllReceipts, SWT.CENTER);
+		tblclmnIssuer.setWidth(82);
+		tblclmnIssuer.setText("Issuer");
 		
 		TableColumn tblclmnAccountant = new TableColumn(tableAllReceipts, SWT.CENTER);
 		tblclmnAccountant.setWidth(82);
 		tblclmnAccountant.setText("Accountant");
 		
-		TableColumn tblclmnOwner = new TableColumn(tableAllReceipts, SWT.CENTER);
-		tblclmnOwner.setWidth(75);
-		tblclmnOwner.setText("Owner");
+		TableColumn tblclmnRecipient = new TableColumn(tableAllReceipts, SWT.CENTER);
+		tblclmnRecipient.setWidth(75);
+		tblclmnRecipient.setText("Recipient");
 		
 		TableColumn tblclmnDepositor = new TableColumn(tableAllReceipts, SWT.CENTER);
 		tblclmnDepositor.setWidth(73);
@@ -514,15 +514,15 @@ public class BVerifyWarehouseGui {
 			    		}
 			    	
 					// Call server to void receipt.
-		    			try {
-		    				bverifywarehouseapp.initRedeemReceipt(receiptJSON);
-		    			} catch (UnsupportedEncodingException e) {
-		    				// TODO Auto-generated catch block
-		    				e.printStackTrace();
-		    			} catch (RemoteException e) {
-		    				// TODO Auto-generated catch block
-		    				e.printStackTrace();
-		    			}
+//		    			try {
+//		    				bverifywarehouseapp.initRedeemReceipt(receiptJSON);
+//		    			} catch (UnsupportedEncodingException e) {
+//		    				// TODO Auto-generated catch block
+//		    				e.printStackTrace();
+//		    			} catch (RemoteException e) {
+//		    				// TODO Auto-generated catch block
+//		    				e.printStackTrace();
+//		    			}
 		    			
 					// Reflect changes in all receipts table. Should not actually do this until gets approved.
 					tableAllReceipts.remove(tableAllReceipts.getSelectionIndices());
