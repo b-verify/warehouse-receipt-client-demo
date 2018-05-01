@@ -109,25 +109,29 @@ public class BVerifyWarehouseApp implements Runnable {
 //				.build();
 //		IssueReceiptRequest requestIssueMessage = 
 //				IssueReceiptRequest.newBuilder()
-//				// Need to translate string names into id
+//				// Need to translate string names into id from PKI
 //				.setIssuerId(receiptJSON.get("warehouse"))
 //			    .setRecepientId(receiptJSON.get("owner"))
 //			    .setReceipt(receipt)
 //			    .build();
 		bverifyserver.startIssueReceipt(requestIssueMessage);
+		//Also approves issue
+		bverifywarehouse.approveReceiptIssue(requestIssueMessage);
 	}
 	
 	public void initRedeemReceipt(JSONObject receiptJSON) throws RemoteException, UnsupportedEncodingException {
-		byte[] requestIssueMessage = receiptJSON.toString().getBytes("utf-8");
+		byte[] requestRedeemMessage = receiptJSON.toString().getBytes("utf-8");
 		// Build protobuf receipt redeem message
-//		IssueReceiptRequest requestIssueMessage = 
-//				IssueReceiptRequest.newBuilder()
-//				// Need to translate string names into id and hash receipt
+//		RedeemReceiptRequest requestRedeemMessage = 
+//				RedeemReceiptRequest.newBuilder()
+//				// Need to translate string names into id from PKI and hash receipt
 //				.setIssuerId(receiptJSON.get("warehouse"))
 //			    .setRecepientId(receiptJSON.get("owner"))
-//			    .setReceiptHash()
+//			    .setReceiptHash(receiptJSON.toString().getBytes("utf-8").hashCode())
 //			    .build();		
-		bverifyserver.startRedeemReceipt(requestIssueMessage);
+		bverifyserver.startRedeemReceipt(requestRedeemMessage);
+		//Also approves redeem
+		bverifywarehouse.approveReceiptRedeem(requestRedeemMessage);
 	}
 	
 	public String getClientName() {
