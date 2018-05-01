@@ -1,224 +1,119 @@
 package org.b_verify.client;
 
-import java.io.IOException;
-import java.rmi.AlreadyBoundException;
-import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
-import java.util.HashMap;
+import java.time.LocalDateTime;
+import java.text.Collator;
+import java.util.Locale;
 
-import org.b_verify.common.InsufficientFundsException;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.forms.widgets.FormToolkit;
+import org.json.*;
 
-
-
+/**
+ * 
+ * @author Binh
+ *
+ */
 public class BVerifyClientGui {
 
 	protected Shell shell;
-	private final FormToolkit formToolkit = new FormToolkit(Display.getDefault());
 	private Display display;
+	private final FormToolkit formToolkit = new FormToolkit(Display.getDefault());
+	private final Font sectionHeaderLabelFont = new Font(display, new FontData(".AppleSystemUIFont", 14, SWT.BOLD));
+	private final Font subHeaderLabelFont = new Font(display, new FontData(".AppleSystemUIFont", 12, SWT.NORMAL));
 	
-	// server config 
-	private Text serverAddress;
-	private Text serverTXID;
+	// last commitment section variables
+	private Label labelClientAddressValue;
+	private Label labelNumberValue;
+	private Label labelCommitDateValue;
+	private Label labelTxnHashValue;
 	
-	// client config
-	private Text clientAddress;
-	private BVerifyClientApp bverifyclientapp;
-
-	private Label lblOutgoingHeader;
-	private Label lblOutgoingRecipientLabel;
-	private Label lblOutgoingAmountLabel;
-	private Text txtOutgoingActualRecipient;
-	private Text txtOutgoingActualAmount;
-
-	private Label lblIncomingHeader;
-	private Table tableIncoming;
-	private Table tableAllUserBalances;
-	private HashMap<String, TableItem> currentTableMap = new HashMap<>();
-
-	private Label lblSyncStatus;
-	private Label lblSyncLastVerifiedUpdateDataLabel;
-	private Label lblSyncLastVerifiedUpdateDataValue;
-	private Label lblSyncLastVerifiedUpdateCommitmentNumberLabel;
-	private Label lblSyncLastVerifiedUpdateCommitmentNumberValue;
-	private Label lblSyncLastVerifiedUpdateTxnHashLabel;
-	private Label lblSyncLastVerifiedUpdateTxnHashValue;
-
+	// process new receipt section variables
+	private Text textIssuer;
+	private Text textAccountant;
+	private Text textRecipient;
+	private Text textDepositor;
+	private Combo categorySelector;
+	private static final String[] CATEGORIES = new String[] { "corn", "soy", "wheat" };
+	private Text textDate;
+	private Combo insuranceSelector;
+	private static final String[] INSURANCES = new String[] { "full coverage", "against fire", "against theft", "not covered" };
+	private Text textWeight;
+	private Text textVolume;
+	private Text textHumidity;
+	private Text textPrice;
+	private Text textOtherDetails;
 	
-	// configuration information (freeze this once started)
-	private boolean configured;
-	private Combo networkSelector;
-	private Button startSync;
-	private static final String[] NETWORKS = new String[] { "REGTEST", "TESTNET3", "MAINNET" };
-
+	// all receipts section variables
+	private Table tableAllReceipts;
+	private Label lblLastUpdatedTime;
+	private static final String[] ALL_RECEIPT_COLUMNS = {"issuer", "accountant", "recipient", "depositor", 
+			"category", "date", "insurance", "weight", "volume", "humidity", "price", "details"};
+	private static final int ALL_RECEIPT_COLUMN_COUNT = ALL_RECEIPT_COLUMNS.length;
 
 	/**
-	 * Launch the application.
-	 * 
-	 * @param args
+	 * Open the window.
 	 */
-	public static void main(String[] args) {
-		try {
-			BVerifyClientGui window = new BVerifyClientGui();
-			window.open();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	/**
-	 * Open the window and start the main GUI thread
-	 */
-	public void open() {
+	public void openWindow(BVerifyClientApp bverifyclientapp) {
 		display = Display.getDefault();
 		createContents();
 		shell.open();
 		shell.layout();
-//		while (!shell.isDisposed()) {
-//			if (!display.readAndDispatch()) {
-//				display.sleep();
-//			}
-//		}
+		
+		setClientAddress(bverifyclientapp.getClientName());
+		
+		while (!shell.isDisposed()) {
+			if (!display.readAndDispatch()) {
+				display.sleep();
+			}
+		}
 	}
 
 	/**
-	 * Create contents of application window.
+	 * Create contents of the window.
 	 */
 	protected void createContents() {
-		// Create Application Shell
 		shell = new Shell();
-		shell.setSize(500, 700);
-		shell.setText("b_verify Client Application");
-
-		// create server config 
-		createServerConfig();
+		shell.setSize(1200, 650);
+		shell.setText("B_verify Desktop Client");
 		
-		// sync progress
-		syncProgressStatus();
-
-		// Create User Configuration Information Section
-
-		// Create Outgoing Transfer Information Section
-		createOutgoingTransferSection();
-
-		// Create Incoming Transfer Information Section
-		// createIncomingTransferSection();
-
-		// Create All User Balances Information Section
-		createAllUserBalancesSection();
-	}
-
-	/**
-	 * Sets up server configuration information section.
-	 */
-	private void createServerConfig() {
-		Label serverConfigHeader = new Label(shell, SWT.NONE);
-		serverConfigHeader.setAlignment(SWT.CENTER);
-		serverConfigHeader.setBounds(67, 10, 371, 19);
-		formToolkit.adapt(serverConfigHeader, true, true);
-		serverConfigHeader.setText("Configuration Information");
+		// Create Last Commitment Section
+		createLastCommitmentSection();
 		
-		Label clientAddressLabel = new Label(shell, SWT.NONE);
-		clientAddressLabel.setBounds(67, 35, 139, 19);
-		formToolkit.adapt(clientAddressLabel, true, true);
-		clientAddressLabel.setText("Client Address:");
-
-		Label serverAddressLabel = new Label(shell, SWT.NONE);
-		serverAddressLabel.setBounds(67, 60, 139, 19);
-		formToolkit.adapt(serverAddressLabel, true, true);
-		serverAddressLabel.setText("Server Address:");
-
-		Label serverTXIDLabel = new Label(shell, SWT.NONE);
-		serverTXIDLabel.setBounds(67, 85, 139, 19);
-		formToolkit.adapt(serverTXIDLabel, true, true);
-		serverTXIDLabel.setText("Server TxID:");
+		// Create Process New Receipt Section
+		createNewReceiptSection();
 		
-		Label networkLabel = new Label(shell, SWT.NONE);
-		networkLabel.setBounds(67, 120, 139, 19);
-		formToolkit.adapt(networkLabel, true, true);
-		networkLabel.setText("Network:");
-
-		clientAddress = new Text(shell, SWT.NONE);
-		clientAddress.setBounds(212, 35, 226, 19);
-		formToolkit.adapt(clientAddress, true, true);
-		clientAddress.setText("<---set once the sync is started --->");
-		
-		serverAddress = new Text(shell, SWT.NONE);
-		serverAddress.setBounds(212, 60, 226, 19);
-		formToolkit.adapt(serverAddress, true, true);
-		serverAddress.setText("");
-
-		serverTXID = new Text(shell, SWT.NONE);
-		serverTXID.setBounds(212, 85, 226, 19);
-		formToolkit.adapt(serverTXID, true, true);
-		serverTXID.setText("");
-
-		networkSelector = new Combo(shell, SWT.DROP_DOWN);
-		networkSelector.setBounds(212, 120, 226, 19);
-		networkSelector.setItems(NETWORKS);
-		formToolkit.adapt(networkSelector);
-		
-		// start sync button
-		startSync = new Button(shell, SWT.NONE);
-		startSync.setBounds(67, 150, 226, 30);
-		formToolkit.adapt(startSync, true, true);
-		startSync.setText("START SYNC");
-		
-		// mark as starting not configured
-		configured = false;
-
-		// creates a catena wallet and starts syncing!
-		BVerifyClientGui gui = this;
-		
-		Listener startSyncListener = new Listener() {
-			public void handleEvent(Event event) {
-				if (configured) {
-					System.out.println("ALREADY CONFIGURED");
-				}
-				if (networkSelector.getSelectionIndex() == -1) {
-					System.out.println("NOTHING SELECTED - FAIL ");
-				}
-				String network = networkSelector.getText();
-				String address = serverAddress.getText();
-				String txid = serverTXID.getText();
-				configured = true;			
-				try {
-					bverifyclientapp = new BVerifyClientApp(address,
-							txid, network, gui);
-					String clientName = bverifyclientapp.getClientName();
-					// update client name
-					display.asyncExec(new Runnable() {
-						@Override
-						public void run() {
-							clientAddress.setText(clientName);
-						}
-					});
-					
-					// start the client app asynchronously 
-					Thread tr = new Thread(bverifyclientapp);
-					tr.start();
-				} catch (IOException | AlreadyBoundException | NotBoundException e) {
-					e.printStackTrace();
-					System.exit(1);
-				}
-			}
-		};
-		
-		startSync.addListener(SWT.Selection, startSyncListener);
+		// Create All Receipts Section
+		createAllReceiptsSection();
 	}
 	
+	/**
+	 * Sets the client address in the desktop client gui.
+	 * 
+	 * @param clientAddress
+	 */
+	private void setClientAddress(String clientAddress) {
+		labelClientAddressValue.setText(clientAddress);
+//		display.asyncExec(new Runnable() {
+//			@Override
+//			public void run() {
+//				labelClientAddressValue.setText(clientAddress);
+//			}
+//		});
+	}
 	
 	// all updates to GUI must be scheduled via the GUI thread 
 	// this is an example
@@ -226,181 +121,434 @@ public class BVerifyClientGui {
 		display.asyncExec(new Runnable() {
 			@Override
 			public void run() {
-				lblSyncLastVerifiedUpdateCommitmentNumberValue.setText(Integer.toString(newCommitmentNumber).toString());
-				lblSyncLastVerifiedUpdateDataValue.setText(newCommitmentData);
-				lblSyncLastVerifiedUpdateTxnHashValue.setText(newCommitmentTxnHash);
-			}
-		});
-	}
-	
-	// update should also be on GUI thread
-	public void updateUserBalances(HashMap<String, String> userBalancesMap) {
-		display.asyncExec(new Runnable() {
-			@Override
-			public void run() {
-				// Iterate over all user pubkey in userBalancesMap
-			    // Have hash map where keys are public keys of clients and values are references to table items
-			    // Once user balances are updated, find TableItem mapping to public key and update the setText with new balance
-				
-				// If public key is not present in current table, create table item
-				// Temporary table entry
-				TableItem item1 = new TableItem(tableAllUserBalances, SWT.NONE);
-			    item1.setText(new String[] { "currentUserPubKey", "User Balance"});
-			    
-				// Else get reference to table item and update balance text
-				// Temporary table entry
-				currentTableMap.get("currentUserPubKey").setText(new String[] { "currentUserPubKey", "Updated Balance"});
+				labelNumberValue.setText(Integer.toString(newCommitmentNumber).toString());
+				labelCommitDateValue.setText(newCommitmentData);
+				labelTxnHashValue.setText(newCommitmentTxnHash);
 			}
 		});
 	}
 	
 	/**
-	 * Sets up the outgoing transfer information section.
+	 * Creates contents of last commitment section.
 	 */
-	private void createOutgoingTransferSection() {
-		lblOutgoingHeader = new Label(shell, SWT.NONE);
-		lblOutgoingHeader.setAlignment(SWT.CENTER);
-		lblOutgoingHeader.setBounds(67, 200, 371, 19);
-		formToolkit.adapt(lblOutgoingHeader, true, true);
-		lblOutgoingHeader.setText("Transfer");
-
-		lblOutgoingRecipientLabel = new Label(shell, SWT.NONE);
-		lblOutgoingRecipientLabel.setBounds(67, 230, 139, 19);
-		formToolkit.adapt(lblOutgoingRecipientLabel, true, true);
-		lblOutgoingRecipientLabel.setText("Recipient PubKey:");
-
-		lblOutgoingAmountLabel = new Label(shell, SWT.NONE);
-		lblOutgoingAmountLabel.setBounds(67, 260, 139, 18);
-		formToolkit.adapt(lblOutgoingAmountLabel, true, true);
-		lblOutgoingAmountLabel.setText("Amount:");
-
-		txtOutgoingActualRecipient = new Text(shell, SWT.BORDER);
-		txtOutgoingActualRecipient.setText("recipientpublickey");
-		txtOutgoingActualRecipient.setBounds(212, 230, 226, 19);
-		formToolkit.adapt(txtOutgoingActualRecipient, true, true);
-
-		txtOutgoingActualAmount = new Text(shell, SWT.BORDER);
-		txtOutgoingActualAmount.setText("1000");
-		txtOutgoingActualAmount.setBounds(212, 260, 226, 19);
-		formToolkit.adapt(txtOutgoingActualAmount, true, true);
-
-		Button btnOutgoingRequest = new Button(shell, SWT.NONE);
-		btnOutgoingRequest.setBounds(67, 300, 210, 25);
-		formToolkit.adapt(btnOutgoingRequest, true, true);
-		btnOutgoingRequest.setText("Request Transfer");
-
-		Listener transferButtonListener = new Listener() {
+	private void createLastCommitmentSection() {
+		
+		Label lblLastVerifiedCommitment = new Label(shell, SWT.NONE);
+		lblLastVerifiedCommitment.setAlignment(SWT.CENTER);
+		lblLastVerifiedCommitment.setFont(sectionHeaderLabelFont);
+		lblLastVerifiedCommitment.setBounds(10, 10, 435, 24);
+		formToolkit.adapt(lblLastVerifiedCommitment, true, true);
+		lblLastVerifiedCommitment.setText("LAST VERIFIED COMMITMENT");
+		
+		Label labelClientAddress = new Label(shell, SWT.NONE);
+		labelClientAddress.setFont(subHeaderLabelFont);
+		labelClientAddress.setBounds(30, 40, 90, 24);
+		formToolkit.adapt(labelClientAddress, true, true);
+		labelClientAddress.setText("Client Address:");
+		
+		Label labelNumber = new Label(shell, SWT.NONE);
+		labelNumber.setText("Number:");
+		labelNumber.setFont(subHeaderLabelFont);
+		labelNumber.setBounds(30, 70, 90, 24);
+		formToolkit.adapt(labelNumber, true, true);
+		
+		Label labelCommitDate = new Label(shell, SWT.NONE);
+		labelCommitDate.setText("Date:");
+		labelCommitDate.setFont(subHeaderLabelFont);
+		labelCommitDate.setBounds(30, 100, 90, 24);
+		formToolkit.adapt(labelCommitDate, true, true);
+		
+		Label labelTxnHash = new Label(shell, SWT.NONE);
+		labelTxnHash.setText("Txn Hash:");
+		labelTxnHash.setFont(subHeaderLabelFont);
+		labelTxnHash.setBounds(30, 130, 90, 24);
+		formToolkit.adapt(labelTxnHash, true, true);
+		
+		labelClientAddressValue = new Label(shell, SWT.NONE);
+		labelClientAddressValue.setText("N/A");
+		labelClientAddressValue.setBounds(126, 40, 314, 24);
+		formToolkit.adapt(labelClientAddressValue, true, true);
+		
+		labelNumberValue = new Label(shell, SWT.NONE);
+		labelNumberValue.setText("N/A");
+		labelNumberValue.setBounds(126, 70, 314, 24);
+		formToolkit.adapt(labelNumberValue, true, true);
+		
+		labelCommitDateValue = new Label(shell, SWT.NONE);
+		labelCommitDateValue.setText("N/A");
+		labelCommitDateValue.setBounds(126, 100, 314, 24);
+		formToolkit.adapt(labelCommitDateValue, true, true);
+		
+		labelTxnHashValue = new Label(shell, SWT.NONE);
+		labelTxnHashValue.setText("N/A");
+		labelTxnHashValue.setBounds(126, 130, 314, 24);
+		formToolkit.adapt(labelTxnHashValue, true, true);
+	}
+	
+	/**
+	 * Creates contents of new receipt section.
+	 */
+	private void createNewReceiptSection() {
+		
+		Label lblProcessNewReceipt = new Label(shell, SWT.NONE);
+		lblProcessNewReceipt.setAlignment(SWT.CENTER);
+		lblProcessNewReceipt.setFont(sectionHeaderLabelFont);
+		lblProcessNewReceipt.setBounds(10, 206, 430, 24);
+		formToolkit.adapt(lblProcessNewReceipt, true, true);
+		lblProcessNewReceipt.setText("PROCESS NEW RECEIPT");
+		
+		Label labelIssuer = new Label(shell, SWT.NONE);
+		labelIssuer.setText("Issuer:");
+		labelIssuer.setFont(subHeaderLabelFont);
+		labelIssuer.setBounds(30, 236, 90, 24);
+		formToolkit.adapt(labelIssuer, true, true);
+		
+		textIssuer = new Text(shell, SWT.BORDER);
+		textIssuer.setBounds(131, 236, 314, 24);
+		formToolkit.adapt(textIssuer, true, true);
+		
+		Label labelAccountant = new Label(shell, SWT.NONE);
+		labelAccountant.setText("Accountant:");
+		labelAccountant.setFont(subHeaderLabelFont);
+		labelAccountant.setBounds(30, 266, 90, 24);
+		formToolkit.adapt(labelAccountant, true, true);
+		
+		textAccountant = new Text(shell, SWT.BORDER);
+		textAccountant.setBounds(131, 266, 314, 24);
+		formToolkit.adapt(textAccountant, true, true);
+		
+		Label labelRecipient = new Label(shell, SWT.NONE);
+		labelRecipient.setText("Recipient:");
+		labelRecipient.setFont(subHeaderLabelFont);
+		labelRecipient.setBounds(30, 296, 90, 24);
+		formToolkit.adapt(labelRecipient, true, true);
+		
+		textRecipient = new Text(shell, SWT.BORDER);
+		textRecipient.setBounds(131, 296, 314, 24);
+		
+		Label labelDepositor = new Label(shell, SWT.NONE);
+		labelDepositor.setText("Depositor:");
+		labelDepositor.setFont(subHeaderLabelFont);
+		labelDepositor.setBounds(30, 326, 90, 24);
+		formToolkit.adapt(labelDepositor, true, true);
+		
+		textDepositor = new Text(shell, SWT.BORDER);
+		textDepositor.setBounds(131, 326, 314, 23);
+		formToolkit.adapt(textDepositor, true, true);
+		
+		Label labelCategory = new Label(shell, SWT.NONE);
+		labelCategory.setText("Category:");
+		labelCategory.setFont(subHeaderLabelFont);
+		labelCategory.setBounds(30, 356, 90, 24);
+		formToolkit.adapt(labelCategory, true, true);
+		
+		categorySelector = new Combo(shell, SWT.DROP_DOWN);
+		categorySelector.setBounds(131, 356, 314, 24);
+		categorySelector.setItems(CATEGORIES);
+		formToolkit.adapt(categorySelector);
+		
+		Label labelDate = new Label(shell, SWT.NONE);
+		labelDate.setText("Date:");
+		labelDate.setFont(subHeaderLabelFont);
+		labelDate.setBounds(30, 386, 90, 24);
+		formToolkit.adapt(labelDate, true, true);
+		
+		textDate = new Text(shell, SWT.BORDER);
+		textDate.setText("dd/mm/yyyy");
+		textDate.setBounds(131, 386, 314, 23);
+		
+		Label labelInsurance = new Label(shell, SWT.NONE);
+		labelInsurance.setText("Insurance:");
+		labelInsurance.setFont(subHeaderLabelFont);
+		labelInsurance.setBounds(30, 414, 90, 24);
+		formToolkit.adapt(labelInsurance, true, true);
+		
+		insuranceSelector = new Combo(shell, SWT.DROP_DOWN);
+		insuranceSelector.setBounds(131, 414, 314, 24);
+		insuranceSelector.setItems(INSURANCES);
+		formToolkit.adapt(insuranceSelector);
+		
+		Label labelWeight = new Label(shell, SWT.NONE);
+		labelWeight.setText("Weight (kg):");
+		labelWeight.setFont(subHeaderLabelFont);
+		labelWeight.setBounds(30, 444, 90, 24);
+		formToolkit.adapt(labelWeight, true, true);
+		
+		textWeight = new Text(shell, SWT.BORDER);
+		textWeight.setBounds(131, 444, 314, 24);
+		
+		Label labelVolume = new Label(shell, SWT.NONE);
+		labelVolume.setText("Volume (m^3):");
+		labelVolume.setFont(subHeaderLabelFont);
+		labelVolume.setBounds(30, 474, 90, 24);
+		formToolkit.adapt(labelVolume, true, true);
+		
+		textVolume = new Text(shell, SWT.BORDER);
+		textVolume.setBounds(131, 474, 314, 24);
+		
+		Label labelHumidity = new Label(shell, SWT.NONE);
+		labelHumidity.setText("Humidity (%):");
+		labelHumidity.setFont(subHeaderLabelFont);
+		labelHumidity.setBounds(30, 504, 90, 24);
+		formToolkit.adapt(labelHumidity, true, true);
+		
+		textHumidity = new Text(shell, SWT.BORDER);
+		textHumidity.setBounds(131, 504, 314, 24);
+		formToolkit.adapt(textHumidity, true, true);
+		
+		Label labelPrice = new Label(shell, SWT.NONE);
+		labelPrice.setText("Price (USD):");
+		labelPrice.setFont(subHeaderLabelFont);
+		labelPrice.setBounds(30, 534, 90, 24);
+		formToolkit.adapt(labelPrice, true, true);
+		
+		textPrice = new Text(shell, SWT.BORDER);
+		textPrice.setBounds(131, 534, 314, 24);
+		formToolkit.adapt(textPrice, true, true);
+		
+		Label labelOtherDetails = new Label(shell, SWT.NONE);
+		labelOtherDetails.setText("Other Details:");
+		labelOtherDetails.setFont(subHeaderLabelFont);
+		labelOtherDetails.setBounds(30, 564, 90, 24);
+		formToolkit.adapt(labelOtherDetails, true, true);
+		
+		textOtherDetails = new Text(shell, SWT.BORDER);
+		textOtherDetails.setBounds(131, 564, 314, 24);
+		textOtherDetails.setText("n/a");
+		formToolkit.adapt(textOtherDetails, true, true);
+		
+		Button btnIssueNewReceipt = new Button(shell, SWT.NONE);
+		btnIssueNewReceipt.setFont(subHeaderLabelFont);
+		btnIssueNewReceipt.setBounds(10, 594, 187, 24);
+		btnIssueNewReceipt.setText("Issue New Receipt");
+	
+		Listener issueReceiptButtonListener = new Listener() {
 			public void handleEvent(Event event) {
-				// Call here to b_verify client to initiate transfer request with parameters
-				// recipient public key and amount.
-				String recipient = txtOutgoingActualRecipient.getText();
-				int amount = Integer.parseInt(txtOutgoingActualAmount.getText());
-				try {
-					bverifyclientapp.startTransfer(recipient, amount);
-				} catch (RemoteException | InsufficientFundsException e) {
-					e.printStackTrace();
-				}
 				
+				JSONObject receiptJSON = createJsonFromReceiptFields();
+				resetProcessNewReceiptFields();
+				processIssuedReceipt(receiptJSON);
+//				try {
+//					bverifyclientapp.initIssueReceipt(receiptJSON);
+//					// Adds receipt to GUI, should not actually do this until request is approved.
+//					processIssuedReceipt(receiptJSON);
+//	 			} catch (UnsupportedEncodingException e) {
+//	    				// TODO Auto-generated catch block
+//	    				e.printStackTrace();
+//				} catch (RemoteException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
 			}
 		};
-		btnOutgoingRequest.addListener(SWT.Selection, transferButtonListener);
-	}
-
-	/**
-	 * Sets up the incoming transfer information section.
-	 */
-	private void createIncomingTransferSection() {
-		lblIncomingHeader = new Label(shell, SWT.NONE);
-		lblIncomingHeader.setAlignment(SWT.CENTER);
-		lblIncomingHeader.setBounds(67, 215, 371, 19);
-		formToolkit.adapt(lblIncomingHeader, true, true);
-		lblIncomingHeader.setText("Incoming Transfer Information");
-
-		tableIncoming = new Table(shell, SWT.BORDER | SWT.FULL_SELECTION);
-		tableIncoming.setBounds(67, 240, 371, 88);
-		formToolkit.adapt(tableIncoming);
-		formToolkit.paintBordersFor(tableIncoming);
-		tableIncoming.setHeaderVisible(true);
-		tableIncoming.setLinesVisible(true);
-
-		TableColumn tblclmnIncomingPublicKey = new TableColumn(tableIncoming, SWT.NONE);
-		tblclmnIncomingPublicKey.setWidth(219);
-		tblclmnIncomingPublicKey.setText("Sender Public Key");
-
-		TableColumn tblclmnIncomingAmount = new TableColumn(tableIncoming, SWT.NONE);
-		tblclmnIncomingAmount.setWidth(91);
-		tblclmnIncomingAmount.setText("Amount (Units)");
-
-		TableColumn tblclmnIncomingConfirm = new TableColumn(tableIncoming, SWT.NONE);
-		tblclmnIncomingConfirm.setWidth(59);
-		tblclmnIncomingConfirm.setText("Confirm?");
-
-		// Temporary table entry
-		TableItem tableItemIncomingPublicKey = new TableItem(tableIncoming, SWT.NONE);
-		tableItemIncomingPublicKey.setText("senderpublickey");
-	}
-
-	
-	private void syncProgressStatus() {
-		lblSyncStatus = new Label(shell, SWT.NONE);
-		lblSyncStatus.setAlignment(SWT.CENTER);
-		lblSyncStatus.setBounds(67, 349, 371, 20);
-		formToolkit.adapt(lblSyncStatus, true, true);
-		lblSyncStatus.setText("Last Verified Commitment");
-		
-		lblSyncLastVerifiedUpdateCommitmentNumberLabel = new Label(shell, SWT.NONE);
-		lblSyncLastVerifiedUpdateCommitmentNumberLabel.setBounds(67, 380, 139, 20);
-		formToolkit.adapt(lblSyncLastVerifiedUpdateCommitmentNumberLabel, true, true);
-		lblSyncLastVerifiedUpdateCommitmentNumberLabel.setText("Number:");
-
-		lblSyncLastVerifiedUpdateCommitmentNumberValue = new Label(shell, SWT.NONE);
-		lblSyncLastVerifiedUpdateCommitmentNumberValue.setBounds(212, 380, 226, 20);
-		formToolkit.adapt(lblSyncLastVerifiedUpdateCommitmentNumberValue, true, true);
-		lblSyncLastVerifiedUpdateCommitmentNumberValue.setText("N/A");
-		
-		
-		lblSyncLastVerifiedUpdateDataLabel = new Label(shell, SWT.NONE);
-		lblSyncLastVerifiedUpdateDataLabel.setBounds(67, 410, 139, 20);
-		formToolkit.adapt(lblSyncLastVerifiedUpdateDataLabel, true, true);
-		lblSyncLastVerifiedUpdateDataLabel.setText("Data:");
-
-		lblSyncLastVerifiedUpdateDataValue = new Label(shell, SWT.NONE);
-		lblSyncLastVerifiedUpdateDataValue.setBounds(212, 410, 226, 20);
-		formToolkit.adapt(lblSyncLastVerifiedUpdateDataValue, true, true);
-		lblSyncLastVerifiedUpdateDataValue.setText("N/A");
-		
-		lblSyncLastVerifiedUpdateTxnHashLabel = new Label(shell, SWT.NONE);
-		lblSyncLastVerifiedUpdateTxnHashLabel.setBounds(67, 440, 139, 20);
-		formToolkit.adapt(lblSyncLastVerifiedUpdateTxnHashLabel, true, true);
-		lblSyncLastVerifiedUpdateTxnHashLabel.setText("Txn Hash:");
-
-		lblSyncLastVerifiedUpdateTxnHashValue = new Label(shell, SWT.NONE);
-		lblSyncLastVerifiedUpdateTxnHashValue.setBounds(212, 440, 226, 20);
-		formToolkit.adapt(lblSyncLastVerifiedUpdateTxnHashValue, true, true);
-		lblSyncLastVerifiedUpdateTxnHashValue.setText("N/A");		
+		btnIssueNewReceipt.addListener(SWT.Selection, issueReceiptButtonListener);
 	}
 	
 	/**
-	 * Sets up the all user balances information section.
+	 * Creates JSONObject from the entries in the process new receipt fields.
+	 * @return JSONObject with data from receipt fields.
 	 */
-	private void createAllUserBalancesSection() {
-		tableAllUserBalances = new Table(shell, SWT.BORDER | SWT.FULL_SELECTION);
-		tableAllUserBalances.setBounds(67, 480, 371, 153);
-		formToolkit.adapt(tableAllUserBalances);
-		formToolkit.paintBordersFor(tableAllUserBalances);
-		tableAllUserBalances.setHeaderVisible(true);
-		tableAllUserBalances.setLinesVisible(true);
-
-		TableColumn tblclmnAllUserPublicKey = new TableColumn(tableAllUserBalances, SWT.NONE);
-		tblclmnAllUserPublicKey.setWidth(263);
-		tblclmnAllUserPublicKey.setText("User Public Key");
+	private JSONObject createJsonFromReceiptFields() {
+		JSONObject obj = new JSONObject();
+        obj.put("issuer", textIssuer.getText());
+        obj.put("accountant", textAccountant.getText());
+        obj.put("recipient", textRecipient.getText());
+        obj.put("depositor", textDepositor.getText());
+        obj.put("category", categorySelector.getText());
+        obj.put("date", textDate.getText());
+        obj.put("insurance", insuranceSelector.getText());
+        obj.put("weight", textWeight.getText());
+        obj.put("volume", textVolume.getText());
+        obj.put("humidity", textHumidity.getText());
+        obj.put("price", textPrice.getText());
+        obj.put("details", textOtherDetails.getText());
+        return obj;
+	}
+	/**
+	 * Resets the entries in the process new receipt fields.
+	 */
+	private void resetProcessNewReceiptFields() {
+		textIssuer.setText("");
+		textAccountant.setText("");
+		textRecipient.setText("");
+		textDepositor.setText("");
+		categorySelector.setText("");
+		textDate.setText("dd/mm/yyyy");
+		insuranceSelector.setText("");
+		textWeight.setText("");
+		textVolume.setText("");
+		textHumidity.setText("");
+		textPrice.setText("");
+		textOtherDetails.setText("n/a");
+	}
+	
+	/**
+	 * Create contents of all receipts section.
+	 */
+	private void createAllReceiptsSection() {
 		
-		TableColumn tblclmnAllUserBalance = new TableColumn(tableAllUserBalances, SWT.NONE);
-		tblclmnAllUserBalance.setWidth(106);
-		tblclmnAllUserBalance.setText("Balance");
+		Label lblAllReceipts = new Label(shell, SWT.NONE);
+		lblAllReceipts.setAlignment(SWT.CENTER);
+		lblAllReceipts.setFont(sectionHeaderLabelFont);
+		lblAllReceipts.setBounds(500, 10, 690, 24);
+		formToolkit.adapt(lblAllReceipts, true, true);
+		lblAllReceipts.setText("ALL RECEIPTS");
+		
+		tableAllReceipts = new Table(shell, SWT.BORDER | SWT.FULL_SELECTION);
+		tableAllReceipts.setBounds(500, 40, 690, 548);
+		tableAllReceipts.setHeaderVisible(true);
+		tableAllReceipts.setLinesVisible(true);
+		
+		TableColumn tblclmnIssuer = new TableColumn(tableAllReceipts, SWT.CENTER);
+		tblclmnIssuer.setWidth(100);
+		tblclmnIssuer.setText("Issuer");
+		
+		TableColumn tblclmnAccountant = new TableColumn(tableAllReceipts, SWT.CENTER);
+		tblclmnAccountant.setWidth(100);
+		tblclmnAccountant.setText("Accountant");
+		
+		TableColumn tblclmnRecipient = new TableColumn(tableAllReceipts, SWT.CENTER);
+		tblclmnRecipient.setWidth(100);
+		tblclmnRecipient.setText("Recipient");
+		
+		TableColumn tblclmnDepositor = new TableColumn(tableAllReceipts, SWT.CENTER);
+		tblclmnDepositor.setWidth(100);
+		tblclmnDepositor.setText("Depositor");
+		
+		TableColumn tblclmnCategory = new TableColumn(tableAllReceipts, SWT.CENTER);
+		tblclmnCategory.setWidth(100);
+		tblclmnCategory.setText("Category");
+		
+		TableColumn tblclmnDate = new TableColumn(tableAllReceipts, SWT.CENTER);
+		tblclmnDate.setWidth(100);
+		tblclmnDate.setText("Date");
+		
+		TableColumn tblclmnInsurance = new TableColumn(tableAllReceipts, SWT.CENTER);
+		tblclmnInsurance.setWidth(100);
+		tblclmnInsurance.setText("Insurance");
+		
+		TableColumn tblclmnWeight = new TableColumn(tableAllReceipts, SWT.CENTER);
+		tblclmnWeight.setWidth(100);
+		tblclmnWeight.setText("Weight");
+		
+		TableColumn tblclmnVolume = new TableColumn(tableAllReceipts, SWT.CENTER);
+		tblclmnVolume.setWidth(100);
+		tblclmnVolume.setText("Volume");
+		
+		TableColumn tblclmnHumidity = new TableColumn(tableAllReceipts, SWT.CENTER);
+		tblclmnHumidity.setWidth(100);
+		tblclmnHumidity.setText("Humidity");
+		
+		TableColumn tblclmnPrice = new TableColumn(tableAllReceipts, SWT.CENTER);
+		tblclmnPrice.setWidth(100);
+		tblclmnPrice.setText("Price");
+		
+		TableColumn tblclmnOtherDetails = new TableColumn(tableAllReceipts, SWT.CENTER);
+		tblclmnOtherDetails.setWidth(100);
+		tblclmnOtherDetails.setText("Other Details");
+		
+		Listener sortListener = new Listener() {
+			public void handleEvent(Event e) {
+		        TableItem[] items = tableAllReceipts.getItems();
+		        Collator collator = Collator.getInstance(Locale.getDefault());
+		        for (int i = 1; i < items.length; i++) {
+		        		String value1 = items[i].getText(0);
+		            for (int j = 0; j < i; j++) {
+		            		String value2 = items[j].getText(0);
+		            		if (collator.compare(value1, value2) < 0) {
+		            			String[] values = { items[i].getText(0), items[i].getText(1), items[i].getText(2), 
+		            					items[i].getText(3), items[i].getText(4), items[i].getText(5), items[i].getText(6),
+		            					items[i].getText(7), items[i].getText(8), items[i].getText(9), items[i].getText(10),
+		            					items[i].getText(11)};
+		            			items[i].dispose();
+		            			TableItem item = new TableItem(tableAllReceipts, SWT.NONE, j);
+		            			item.setText(values);
+		            			items = tableAllReceipts.getItems();
+		            			break;
+		            		}
+		            	}
+		        }
+		    }
+		};
+		tblclmnIssuer.addListener(SWT.Selection, sortListener);
+		tableAllReceipts.setSortColumn(tblclmnIssuer);
 
-		// Temporary table entry
-		TableItem item1 = new TableItem(tableAllUserBalances, SWT.NONE);
-	    item1.setText(new String[] { "Column1 text", "Column2 text"});
+		tblclmnAccountant.addListener(SWT.Selection, sortListener);
+		tableAllReceipts.setSortColumn(tblclmnAccountant);
+		
+		Button btnRedeemSelectedReceipt = new Button(shell, SWT.NONE);
+		btnRedeemSelectedReceipt.setFont(subHeaderLabelFont);
+		btnRedeemSelectedReceipt.setBounds(500, 594, 187, 24);
+		btnRedeemSelectedReceipt.setText("Redeem Selected Receipt");
+		
+		Label lblLastUpdated = new Label(shell, SWT.NONE);
+		lblLastUpdated.setFont(subHeaderLabelFont);
+		lblLastUpdated.setBounds(789, 594, 85, 24);
+		lblLastUpdated.setText("Last Updated:");
+		
+		lblLastUpdatedTime = new Label(shell, SWT.NONE);
+		lblLastUpdated.setFont(subHeaderLabelFont);
+		lblLastUpdatedTime.setBounds(880, 594, 310, 24);
+		lblLastUpdatedTime.setText("N/A");
+		
+		Listener redeemReceiptButtonListener = new Listener() {
+			public void handleEvent(Event event) {
+				// Get confirmation from user.
+				MessageBox messageBox = new MessageBox(shell, SWT.ICON_QUESTION
+			            | SWT.YES | SWT.NO);
+		        messageBox.setText("CONFIRMATION");
+			    messageBox.setMessage("Do you really want to redeem this receipt?");
+			    int response = messageBox.open();
+			    if (response == SWT.YES) {
+			    		// Get selected receiptJSON from table.
+			    		TableItem selectedItem = tableAllReceipts.getSelection()[0];
+					JSONObject receiptJSON = new JSONObject();
+			    		for (int i=0; i< ALL_RECEIPT_COLUMNS.length; i++) {
+			    			receiptJSON.put(ALL_RECEIPT_COLUMNS[i], selectedItem.getText(i));
+			    		}
+			    	
+					// Call server to void receipt.
+//		    			try {
+//		    				bverifyclientapp.initRedeemReceipt(receiptJSON);
+//		    			} catch (UnsupportedEncodingException e) {
+//		    				// TODO Auto-generated catch block
+//		    				e.printStackTrace();
+//		    			} catch (RemoteException e) {
+//		    				// TODO Auto-generated catch block
+//		    				e.printStackTrace();
+//		    			}
+		    			
+					// Reflect changes in all receipts table. Should not actually do this until gets approved.
+					tableAllReceipts.remove(tableAllReceipts.getSelectionIndices());
+					
+				    // Update last updated time.
+				    String currentTime = LocalDateTime.now().toString();
+				    lblLastUpdatedTime.setText(currentTime);
+			    }
+			}
+		};
+		btnRedeemSelectedReceipt.addListener(SWT.Selection, redeemReceiptButtonListener);
+	}
+	
+	/**
+	 * Process issued receipt for it to be reflected in all receipts table.
+	 * @param receiptMap map storing receipt data labels as keys and data values as values.
+	 */
+	private void processIssuedReceipt(JSONObject receiptJSON) {
+		// Find new mappings of values to columns in all receipts table.
+		String[] dataValueIndices = new String[ALL_RECEIPT_COLUMN_COUNT];
+		for (int i=0; i< ALL_RECEIPT_COLUMN_COUNT; i++) {
+			String currentDataValue = receiptJSON.getString(ALL_RECEIPT_COLUMNS[i]);
+			dataValueIndices[i] = currentDataValue;
+		}
+		// Create and add table item to table.
+		TableItem item = new TableItem(tableAllReceipts, SWT.NONE);
+	    item.setText(new String[] { dataValueIndices[0], dataValueIndices[1], dataValueIndices[2], dataValueIndices[3], dataValueIndices[4],
+	    		dataValueIndices[5], dataValueIndices[6], dataValueIndices[7], dataValueIndices[8], dataValueIndices[9],
+	    		dataValueIndices[10], dataValueIndices[11]});
+	    
+	    // Update last updated time.
+	    String currentTime = LocalDateTime.now().toString();
+	    lblLastUpdatedTime.setText(currentTime);
 	}
 }

@@ -5,8 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.b_verify.common.BVerifyCommitment;
-import org.b_verify.common.BVerifyProtocolClient;
-import org.b_verify.common.BVerifyProtocolServer;
+import org.b_verify.common.BVerifyProtocolClientAPI;
+import org.b_verify.common.BVerifyProtocolServerAPI;
 import org.b_verify.common.DummyProof;
 import org.b_verify.common.Proof;
 import org.catena.client.CatenaStatementListener;
@@ -15,38 +15,48 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The client is responsible for keeping track of the balances of users by 
- * using the b_verify protocol to ask the server for the requisite proofs. This 
- * class manages the core data structures as well as requests and validates the proofs. 
- * It must be thread-safe since some of these methods can be invoked via Java RMI and 
- * BitcoinJ
- * @author henryaspegren
- *
+ * The client is responsible for keeping track of user receipts by using the b_verify 
+ * protocol to ask the server for the requisite proofs. This class manages the core data 
+ * structures as well as requests and validates the proofs. It must be thread-safe since 
+ * some of these methods can be invoked via Java RMI and BitcoinJ.
+ * 
+ * @author binhle
  */
-public class BVerifyClient implements BVerifyProtocolClient, CatenaStatementListener {
+public class BVerifyClient implements BVerifyProtocolClientAPI, CatenaStatementListener {
 
 	private final List<BVerifyCommitment> commitments;
 	private final String clientName;
-	private final BVerifyProtocolServer server;
+	private final BVerifyProtocolServerAPI server;
 	private final BVerifyClientGui appgui;
 	
 	/** Debugging - use this instead of printing to Standard out **/
     private static final Logger log = LoggerFactory.getLogger(BVerifyClient.class);
 
-	
-	public BVerifyClient(String name, BVerifyProtocolServer srvr, BVerifyClientGui gui) {
+	public BVerifyClient(String name, BVerifyProtocolServerAPI srvr, BVerifyClientGui gui) {
 		appgui = gui;
 		commitments = new ArrayList<BVerifyCommitment>();
         clientName = name;
         server = srvr;
 	}
-	
-	public synchronized Proof proposeTransfer(String userTo, String userFrom, Proof proofOfUpdate) throws RemoteException {
-		log.info("Transfer request recieved - userTo:"+userTo+" userFrom:"+userFrom+" proof:"+proofOfUpdate.toString());
-		log.info("Approved Transfer Request");
-		return new DummyProof(this.clientName+" approves!");
+
+	@Override
+	public byte[] approveReceiptIssue(byte[] approveIssueMessage) {
+//		MockClient.approveReceiptIssue(approveIssueMessage);
+		return null;
 	}
 
+	@Override
+	public byte[] approveReceiptRedeem(byte[] approveRedeemMessage) {
+//		MockClient.approveReceiptRedeem(approveRedeemMessage);
+		return null;
+	}
+
+	@Override
+	public byte[] approveReceiptTransfer(byte[] approveTransferMessage) {
+//		MockClient.approveReceiptTransfer(approveTransferMessage);
+		return null;
+	}
+	
 	@Override
 	public synchronized void onStatementAppended(CatenaStatement s) {
 		log.info("Commitment Added: "+s);
@@ -58,22 +68,18 @@ public class BVerifyClient implements BVerifyProtocolClient, CatenaStatementList
 		
 		
 		// ask server for a proof
-		try {
-			log.debug("Asking server to prove commitment by making a getBalanceRequest");
-			Proof response = this.server.getBalance(this.clientName, commitmentNumber);
-			log.debug("Response: "+response);
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
+//		try {
+//			log.debug("Asking server to prove commitment by making a getBalanceRequest");
+//			Proof response = this.server.getUpdates(updateRequest);
+//			log.debug("Response: "+response);
+//		} catch (RemoteException e) {
+//			e.printStackTrace();
+//		}
 		
 		// assume it succeeds (for now)
 		log.debug("Proof succeeded - commitment verified - updating ux");
 		// update the gui
-		appgui.updateCurrentCommitment(commitment.getCommitmentNumber(), new String(commitment.getCommitmentData()), 
-				commitment.getCommitmentTxnHash().toString());
-		
-		// update all user balances
-		
+		appgui.updateCurrentCommitment(commitment.getCommitmentNumber(), new String(commitment.getCommitmentData()),commitment.getCommitmentTxnHash().toString());		
 	}
 
 	@Override
@@ -83,5 +89,4 @@ public class BVerifyClient implements BVerifyProtocolClient, CatenaStatementList
 		log.warn("REORG - feature not implemented yet - crashing program");
 		System.exit(1);		
 	}
-
 }

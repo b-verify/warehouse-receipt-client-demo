@@ -2,6 +2,7 @@ package org.b_verify.client;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -10,9 +11,8 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Iterator;
 
-import org.b_verify.common.BVerifyProtocolClient;
-import org.b_verify.common.BVerifyProtocolServer;
-import org.b_verify.common.InsufficientFundsException;
+import org.b_verify.common.BVerifyProtocolClientAPI;
+import org.b_verify.common.BVerifyProtocolServerAPI;
 import org.b_verify.server.BVerifyServerApp;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
@@ -23,13 +23,13 @@ import org.catena.client.CatenaClient;
 import org.catena.common.CatenaStatement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.json.*;
 
 /**
  * The main app is responsible for setting up and starting the client as well as
- * managing the GUI
+ * managing the desktop client GUI.
  * 
- * @author henryaspegren
- *
+ * @author binhle
  */
 public class BVerifyClientApp implements Runnable {
 
@@ -49,7 +49,7 @@ public class BVerifyClientApp implements Runnable {
 	// components
 	private Registry registry;
 	private BVerifyClient bverifyclient;
-	private BVerifyProtocolServer bverifyserver;
+	private BVerifyProtocolServerAPI bverifyserver;
 	private BVerifyClientGui bverifygui;
 	private CatenaClient commitmentReader;
 	
@@ -74,26 +74,63 @@ public class BVerifyClientApp implements Runnable {
 		addr = Address.fromBase58(params, serveraddress);
 		txid = Sha256Hash.wrap(transactionid);
 		
-		// conmponents 
-		bverifygui = gui;
+		// components 
+		bverifygui = gui;		
 		commitmentReader = new CatenaClient(params, new File(directory), txid, addr, null);
 		// for now the registry is just on local host 
 		// we will need to change this down the road
 		registry = LocateRegistry.getRegistry(null, BVerifyServerApp.RMI_REGISTRY_PORT);
-		bverifyserver = (BVerifyProtocolServer) registry.lookup("Server");
+		bverifyserver = (BVerifyProtocolServerAPI) registry.lookup("Server");
 		bverifyclient = new BVerifyClient(clientAddress.toBase58(), bverifyserver, bverifygui);
 
-		
-		BVerifyProtocolClient clientStub = (BVerifyProtocolClient) UnicastRemoteObject.exportObject(bverifyclient, 0);
+		BVerifyProtocolClientAPI clientStub = (BVerifyProtocolClientAPI) UnicastRemoteObject.exportObject(bverifyclient, 0);
 		// clients are registered by their pubkeyhash
 		registry.bind(clientName, clientStub);
 		
 		log.info("b_verify client ready");
-
 	}
 	
-	public boolean startTransfer(String transferTo, int amount) throws RemoteException, InsufficientFundsException {
-		return bverifyserver.transfer(clientName, transferTo, amount);
+	public void initIssueReceipt(JSONObject receiptJSON) throws RemoteException, UnsupportedEncodingException {
+		byte[] requestIssueMessage = receiptJSON.toString().getBytes("utf-8");
+		// Build protobuf receipt issue message
+//		Receipt receipt =
+//				Receipt.newBuilder()
+//				.setAccountant(receiptJSON.get("accountant"))
+//				.setDepositor(receiptJSON.get("depositor"))
+//				.setCategory(receiptJSON.get("category"))
+//				.setDate(receiptJSON.get("date"))
+//				.setInsurance(receiptJSON.get("insurance"))
+//				.setWeight((double)receiptJSON.get("weight"))
+//				.setVolume((double)receiptJSON.get("volume"))
+//				.setHumidity((double)receiptJSON.get("humidity"))
+//				.setPrice((double)receiptJSON.get("price"))
+//				.setDetails(receiptJSON.get("details"))
+//				.build();
+//		IssueReceiptRequest requestIssueMessage = 
+//				IssueReceiptRequest.newBuilder()
+//				// Need to translate string names into id from PKI
+//				.setIssuerId(receiptJSON.get("warehouse"))
+//			    .setRecepientId(receiptJSON.get("owner"))
+//			    .setReceipt(receipt)
+//			    .build();
+		bverifyserver.startIssueReceipt(requestIssueMessage);
+		//Also approves issue
+		bverifyclient.approveReceiptIssue(requestIssueMessage);
+	}
+	
+	public void initRedeemReceipt(JSONObject receiptJSON) throws RemoteException, UnsupportedEncodingException {
+		byte[] requestRedeemMessage = receiptJSON.toString().getBytes("utf-8");
+		// Build protobuf receipt redeem message
+//		RedeemReceiptRequest requestRedeemMessage = 
+//				RedeemReceiptRequest.newBuilder()
+//				// Need to translate string names into id from PKI and hash receipt
+//				.setIssuerId(receiptJSON.get("warehouse"))
+//			    .setRecepientId(receiptJSON.get("owner"))
+//			    .setReceiptHash(receiptJSON.toString().getBytes("utf-8").hashCode())
+//			    .build();		
+		bverifyserver.startRedeemReceipt(requestRedeemMessage);
+		//Also approves redeem
+		bverifyclient.approveReceiptRedeem(requestRedeemMessage);
 	}
 	
 	public String getClientName() {

@@ -18,6 +18,11 @@ import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 
+/**
+ * 
+ * @author Binh
+ *
+ */
 public class BVerifyClientConfig {
 
 	protected Shell shell;
@@ -29,8 +34,8 @@ public class BVerifyClientConfig {
 	private Combo networkSelector;
 	private Text textClientAddress;
 	private boolean configured;
-	private BVerifyWarehouseApp bverifywarehouseapp;
-	private BVerifyWarehouseGui bverifywarehousegui;
+	private BVerifyClientApp bverifyclientapp;
+	private BVerifyClientGui bverifyclientgui;
 	
 	private final Font sectionHeaderLabelFont = new Font(display, new FontData(".AppleSystemUIFont", 14, SWT.BOLD));
 	private final Font subHeaderLabelFont = new Font(display, new FontData(".AppleSystemUIFont", 12, SWT.NORMAL));
@@ -133,13 +138,13 @@ public class BVerifyClientConfig {
 				String txid = textServerTxid.getText();
 				configured = true;			
 				try {
-					bverifywarehousegui = new BVerifyWarehouseGui();
-					bverifywarehouseapp = new BVerifyWarehouseApp(address, txid, network, bverifywarehousegui);
+					bverifyclientgui = new BVerifyClientGui();
+					bverifyclientapp = new BVerifyClientApp(address, txid, network, bverifyclientgui);
 					shell.close();
-					bverifywarehousegui.openWindow(bverifywarehouseapp);
+					bverifyclientgui.openWindow(bverifyclientapp);
 				
 					// start the client app asynchronously 
-					Thread tr = new Thread(bverifywarehouseapp);
+					Thread tr = new Thread(bverifyclientapp);
 					tr.start();
 										
 				} catch (IOException | AlreadyBoundException | NotBoundException e) {
