@@ -133,16 +133,15 @@ public class BVerifyClientConfig {
 				String txid = textServerTxid.getText();
 				configured = true;			
 				try {
-					shell.close();
 					bverifywarehousegui = new BVerifyWarehouseGui();
 					bverifywarehouseapp = new BVerifyWarehouseApp(address, txid, network, bverifywarehousegui);
-					String clientName = bverifywarehouseapp.getClientName();
-					bverifywarehousegui.setClientAddress(clientName);
-
+					shell.close();
+					bverifywarehousegui.openWindow(bverifywarehouseapp);
+				
 					// start the client app asynchronously 
 					Thread tr = new Thread(bverifywarehouseapp);
 					tr.start();
-					
+										
 				} catch (IOException | AlreadyBoundException | NotBoundException e) {
 					e.printStackTrace();
 					System.exit(1);

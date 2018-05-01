@@ -74,8 +74,8 @@ public class BVerifyWarehouseApp implements Runnable {
 		addr = Address.fromBase58(params, serveraddress);
 		txid = Sha256Hash.wrap(transactionid);
 		
-		// conmponents 
-		bverifygui = gui;
+		// components 
+		bverifygui = gui;		
 		commitmentReader = new CatenaClient(params, new File(directory), txid, addr, null);
 		// for now the registry is just on local host 
 		// we will need to change this down the road

@@ -1,10 +1,5 @@
 package org.b_verify.client;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.rmi.AlreadyBoundException;
-import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
 import java.time.LocalDateTime;
 import java.text.Collator;
 import java.util.Locale;
@@ -40,7 +35,7 @@ public class BVerifyWarehouseGui {
 	private Label labelNumberValue;
 	private Label labelCommitDateValue;
 	private Label labelTxnHashValue;
-
+	
 	// process new receipt section variables
 	private Text textIssuer;
 	private Text textAccountant;
@@ -65,24 +60,16 @@ public class BVerifyWarehouseGui {
 	private static final int ALL_RECEIPT_COLUMN_COUNT = ALL_RECEIPT_COLUMNS.length;
 
 	/**
-	 * Launch the application.
-	 */
-	public BVerifyWarehouseGui() {
-		try {
-			this.open();			
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	/**
 	 * Open the window.
 	 */
-	public void open() {
+	public void openWindow(BVerifyWarehouseApp bverifywarehouseapp) {
 		display = Display.getDefault();
 		createContents();
 		shell.open();
 		shell.layout();
+		
+		setClientAddress(bverifywarehouseapp.getClientName());
+		
 		while (!shell.isDisposed()) {
 			if (!display.readAndDispatch()) {
 				display.sleep();
@@ -113,13 +100,14 @@ public class BVerifyWarehouseGui {
 	 * 
 	 * @param clientAddress
 	 */
-	public void setClientAddress(String clientAddress) {
-		display.asyncExec(new Runnable() {
-			@Override
-			public void run() {
-				labelClientAddressValue.setText(clientAddress);
-			}
-		});
+	private void setClientAddress(String clientAddress) {
+		labelClientAddressValue.setText(clientAddress);
+//		display.asyncExec(new Runnable() {
+//			@Override
+//			public void run() {
+//				labelClientAddressValue.setText(clientAddress);
+//			}
+//		});
 	}
 	
 	// all updates to GUI must be scheduled via the GUI thread 
@@ -504,7 +492,7 @@ public class BVerifyWarehouseGui {
 				MessageBox messageBox = new MessageBox(shell, SWT.ICON_QUESTION
 			            | SWT.YES | SWT.NO);
 		        messageBox.setText("CONFIRMATION");
-			    messageBox.setMessage("Do you really want to void this receipt?");
+			    messageBox.setMessage("Do you really want to redeem this receipt?");
 			    int response = messageBox.open();
 			    if (response == SWT.YES) {
 			    		// Get selected receiptJSON from table.
