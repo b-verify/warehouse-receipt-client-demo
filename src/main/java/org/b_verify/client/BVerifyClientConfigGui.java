@@ -19,11 +19,11 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 
 /**
+ * Sets up layout of server configuration page to sync to b_verify server.
  * 
  * @author Binh
- *
  */
-public class BVerifyClientConfig {
+public class BVerifyClientConfigGui {
 
 	protected Shell shell;
 	private Display display;
@@ -42,12 +42,11 @@ public class BVerifyClientConfig {
 	private static final String[] NETWORKS = new String[] { "REGTEST", "TESTNET3", "MAINNET" };
 
 	/**
-	 * Launch the application.
-	 * @param args
+	 * Starts the configuration gui.
 	 */
-	public static void main(String[] args) {
+	public static void start() {
 		try {
-			BVerifyClientConfig window = new BVerifyClientConfig();
+			BVerifyClientConfigGui window = new BVerifyClientConfigGui();
 			window.open();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -77,50 +76,52 @@ public class BVerifyClientConfig {
 		shell.setSize(450, 210);
 		shell.setText("B_verify Desktop Client");
 		
-		Label lblConfiguration = new Label(shell, SWT.NONE);
-		lblConfiguration.setFont(sectionHeaderLabelFont);
-		lblConfiguration.setBounds(10, 10, 430, 22);
-		lblConfiguration.setText("B_verify Configuration");
-		
 		Label lblClientAddress = new Label(shell, SWT.NONE);
 		lblClientAddress.setFont(subHeaderLabelFont);
-		lblClientAddress.setBounds(20, 38, 96, 22);
+		lblClientAddress.setBounds(30, 36, 96, 22);
 		lblClientAddress.setText("Client Address:");
 		
 		Label lblServerAddress = new Label(shell, SWT.NONE);
 		lblServerAddress.setFont(subHeaderLabelFont);
-		lblServerAddress.setBounds(20, 66, 96, 22);
+		lblServerAddress.setBounds(30, 66, 96, 22);
 		lblServerAddress.setText("Server Address:");
 		
 		Label lblServerTxid = new Label(shell, SWT.NONE);
 		lblServerTxid.setFont(subHeaderLabelFont);
-		lblServerTxid.setBounds(20, 94, 96, 22);
+		lblServerTxid.setBounds(30, 94, 96, 22);
 		lblServerTxid.setText("Server Txid:");
 		
 		Label lblNetwork = new Label(shell, SWT.NONE);
 		lblNetwork.setFont(subHeaderLabelFont);
-		lblNetwork.setBounds(20, 122, 96, 22);
+		lblNetwork.setBounds(30, 123, 96, 22);
 		lblNetwork.setText("Network:");
 		
 		textServerAddress = new Text(shell, SWT.BORDER);
-		textServerAddress.setBounds(122, 64, 318, 22);
+		textServerAddress.setBounds(132, 64, 308, 22);
 		
 		textServerTxid = new Text(shell, SWT.BORDER);
-		textServerTxid.setBounds(122, 92, 318, 22);
+		textServerTxid.setBounds(132, 92, 308, 22);
 		
 		networkSelector = new Combo(shell, SWT.DROP_DOWN);
-		networkSelector.setBounds(122, 120, 318, 22);
+		networkSelector.setBounds(132, 120, 308, 22);
 		networkSelector.setItems(NETWORKS);
 		formToolkit.adapt(networkSelector);
 		
 		textClientAddress = new Text(shell, SWT.BORDER);
 		textClientAddress.setText("<-- set once the sync is started -->");
-		textClientAddress.setBounds(122, 36, 318, 22);
+		textClientAddress.setBounds(132, 36, 308, 22);
 		
 		Button btnStartSync = new Button(shell, SWT.NONE);
 		btnStartSync.setFont(subHeaderLabelFont);
 		btnStartSync.setBounds(10, 150, 106, 28);
 		btnStartSync.setText("Start Sync");
+		
+		Label lblConfiguration = new Label(shell, SWT.NONE);
+		lblConfiguration.setAlignment(SWT.CENTER);
+		lblConfiguration.setFont(sectionHeaderLabelFont);
+		lblConfiguration.setBounds(20, 10, 420, 22);
+		formToolkit.adapt(lblConfiguration, true, true);
+		lblConfiguration.setText("CONFIGURATION");
 		
 		// mark as starting not configured
 		configured = false;
@@ -137,20 +138,20 @@ public class BVerifyClientConfig {
 				String address = textServerAddress.getText();
 				String txid = textServerTxid.getText();
 				configured = true;			
-				try {
-					bverifyclientgui = new BVerifyClientGui();
-					bverifyclientapp = new BVerifyClientApp(address, txid, network, bverifyclientgui);
-					shell.close();
-					bverifyclientgui.openWindow(bverifyclientapp);
-				
-					// start the client app asynchronously 
-					Thread tr = new Thread(bverifyclientapp);
-					tr.start();
-										
-				} catch (IOException | AlreadyBoundException | NotBoundException e) {
-					e.printStackTrace();
-					System.exit(1);
-				}
+//				try {
+//					bverifyclientgui = new BVerifyClientGui();
+//					bverifyclientapp = new BVerifyClientApp(address, txid, network, bverifyclientgui);
+//					shell.close();
+//					bverifyclientgui.openWindow(bverifyclientapp);
+//				
+//					// start the client app asynchronously 
+//					Thread tr = new Thread(bverifyclientapp);
+//					tr.start();
+//										
+//				} catch (IOException | AlreadyBoundException | NotBoundException e) {
+//					e.printStackTrace();
+//					System.exit(1);
+//				}
 			}
 		};
 		btnStartSync.addListener(SWT.Selection, startSyncListener);

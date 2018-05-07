@@ -7,8 +7,6 @@ import java.util.List;
 import org.b_verify.common.BVerifyCommitment;
 import org.b_verify.common.BVerifyProtocolClientAPI;
 import org.b_verify.common.BVerifyProtocolServerAPI;
-import org.b_verify.common.DummyProof;
-import org.b_verify.common.Proof;
 import org.catena.client.CatenaStatementListener;
 import org.catena.common.CatenaStatement;
 import org.slf4j.Logger;
@@ -39,24 +37,6 @@ public class BVerifyClient implements BVerifyProtocolClientAPI, CatenaStatementL
         server = srvr;
 	}
 
-	@Override
-	public byte[] approveReceiptIssue(byte[] approveIssueMessage) {
-//		MockClient.approveReceiptIssue(approveIssueMessage);
-		return null;
-	}
-
-	@Override
-	public byte[] approveReceiptRedeem(byte[] approveRedeemMessage) {
-//		MockClient.approveReceiptRedeem(approveRedeemMessage);
-		return null;
-	}
-
-	@Override
-	public byte[] approveReceiptTransfer(byte[] approveTransferMessage) {
-//		MockClient.approveReceiptTransfer(approveTransferMessage);
-		return null;
-	}
-	
 	@Override
 	public synchronized void onStatementAppended(CatenaStatement s) {
 		log.info("Commitment Added: "+s);
@@ -89,4 +69,34 @@ public class BVerifyClient implements BVerifyProtocolClientAPI, CatenaStatementL
 		log.warn("REORG - feature not implemented yet - crashing program");
 		System.exit(1);		
 	}
+
+	@Override
+	public byte[] approveReceiptIssue(byte[] approveIssueMessage) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public byte[] approveReceiptRedeem(byte[] approveRedeemMessage) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public byte[] approveReceiptTransfer(byte[] approveTransferMessage) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+//	@Override
+//	public byte[] approveDeposit(byte[] request) throws RemoteException {
+//		// TODO Auto-generated method stub
+//		return null;
+//	}
+//
+//	@Override
+//	public void addNewCommitment(byte[] commitment) throws RemoteException {
+//		// TODO Auto-generated method stub
+//		
+//	}
 }

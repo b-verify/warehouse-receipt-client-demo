@@ -1,8 +1,6 @@
 package org.b_verify.client;
 
 import java.time.LocalDateTime;
-import java.text.Collator;
-import java.util.Locale;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Font;
@@ -23,9 +21,11 @@ import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.json.*;
 
 /**
+ * Handles the layout of the b_verify desktop client gui where clients can
+ * find last commitment information, process new receipts, browse all receipts,
+ * and redeem receipts.
  * 
  * @author Binh
- *
  */
 public class BVerifyClientGui {
 
@@ -36,10 +36,11 @@ public class BVerifyClientGui {
 	private final Font subHeaderLabelFont = new Font(display, new FontData(".AppleSystemUIFont", 12, SWT.NORMAL));
 	
 	// last commitment section variables
-	private Label labelClientAddressValue;
+	private Label labelClientIdValue;
 	private Label labelNumberValue;
 	private Label labelCommitDateValue;
 	private Label labelTxnHashValue;
+	private BVerifyClientApp bverifyclientapp;
 	
 	// process new receipt section variables
 	private Text textIssuer;
@@ -65,15 +66,24 @@ public class BVerifyClientGui {
 	private static final int ALL_RECEIPT_COLUMN_COUNT = ALL_RECEIPT_COLUMNS.length;
 
 	/**
-	 * Open the window.
+	 * 
+	 * @param bverifyclientapp
 	 */
-	public void openWindow(BVerifyClientApp bverifyclientapp) {
+	public BVerifyClientGui(BVerifyClientApp bverifyclientapp) {
+		this.bverifyclientapp = bverifyclientapp;
+	}
+	
+	/**
+	 * Open the window.
+	 * @wbp.parser.entryPoint
+	 */
+	public void openWindow() {
 		display = Display.getDefault();
 		createContents();
 		shell.open();
 		shell.layout();
 		
-		setClientAddress(bverifyclientapp.getClientName());
+		setClientAddress(bverifyclientapp.getClientIdString());
 		
 		while (!shell.isDisposed()) {
 			if (!display.readAndDispatch()) {
@@ -106,13 +116,7 @@ public class BVerifyClientGui {
 	 * @param clientAddress
 	 */
 	private void setClientAddress(String clientAddress) {
-		labelClientAddressValue.setText(clientAddress);
-//		display.asyncExec(new Runnable() {
-//			@Override
-//			public void run() {
-//				labelClientAddressValue.setText(clientAddress);
-//			}
-//		});
+		labelClientIdValue.setText(clientAddress);
 	}
 	
 	// all updates to GUI must be scheduled via the GUI thread 
@@ -140,11 +144,11 @@ public class BVerifyClientGui {
 		formToolkit.adapt(lblLastVerifiedCommitment, true, true);
 		lblLastVerifiedCommitment.setText("LAST VERIFIED COMMITMENT");
 		
-		Label labelClientAddress = new Label(shell, SWT.NONE);
-		labelClientAddress.setFont(subHeaderLabelFont);
-		labelClientAddress.setBounds(30, 40, 90, 24);
-		formToolkit.adapt(labelClientAddress, true, true);
-		labelClientAddress.setText("Client Address:");
+		Label labelClientId = new Label(shell, SWT.NONE);
+		labelClientId.setFont(subHeaderLabelFont);
+		labelClientId.setBounds(30, 40, 90, 24);
+		formToolkit.adapt(labelClientId, true, true);
+		labelClientId.setText("Client Id:");
 		
 		Label labelNumber = new Label(shell, SWT.NONE);
 		labelNumber.setText("Number:");
@@ -164,10 +168,10 @@ public class BVerifyClientGui {
 		labelTxnHash.setBounds(30, 130, 90, 24);
 		formToolkit.adapt(labelTxnHash, true, true);
 		
-		labelClientAddressValue = new Label(shell, SWT.NONE);
-		labelClientAddressValue.setText("N/A");
-		labelClientAddressValue.setBounds(126, 40, 314, 24);
-		formToolkit.adapt(labelClientAddressValue, true, true);
+		labelClientIdValue = new Label(shell, SWT.NONE);
+		labelClientIdValue.setText("N/A");
+		labelClientIdValue.setBounds(126, 40, 314, 24);
+		formToolkit.adapt(labelClientIdValue, true, true);
 		
 		labelNumberValue = new Label(shell, SWT.NONE);
 		labelNumberValue.setText("N/A");
@@ -327,18 +331,8 @@ public class BVerifyClientGui {
 				
 				JSONObject receiptJSON = createJsonFromReceiptFields();
 				resetProcessNewReceiptFields();
+				bverifyclientapp.initIssueReceipt(receiptJSON);
 				processIssuedReceipt(receiptJSON);
-//				try {
-//					bverifyclientapp.initIssueReceipt(receiptJSON);
-//					// Adds receipt to GUI, should not actually do this until request is approved.
-//					processIssuedReceipt(receiptJSON);
-//	 			} catch (UnsupportedEncodingException e) {
-//	    				// TODO Auto-generated catch block
-//	    				e.printStackTrace();
-//				} catch (RemoteException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
 			}
 		};
 		btnIssueNewReceipt.addListener(SWT.Selection, issueReceiptButtonListener);
@@ -446,35 +440,6 @@ public class BVerifyClientGui {
 		TableColumn tblclmnOtherDetails = new TableColumn(tableAllReceipts, SWT.CENTER);
 		tblclmnOtherDetails.setWidth(100);
 		tblclmnOtherDetails.setText("Other Details");
-		
-		Listener sortListener = new Listener() {
-			public void handleEvent(Event e) {
-		        TableItem[] items = tableAllReceipts.getItems();
-		        Collator collator = Collator.getInstance(Locale.getDefault());
-		        for (int i = 1; i < items.length; i++) {
-		        		String value1 = items[i].getText(0);
-		            for (int j = 0; j < i; j++) {
-		            		String value2 = items[j].getText(0);
-		            		if (collator.compare(value1, value2) < 0) {
-		            			String[] values = { items[i].getText(0), items[i].getText(1), items[i].getText(2), 
-		            					items[i].getText(3), items[i].getText(4), items[i].getText(5), items[i].getText(6),
-		            					items[i].getText(7), items[i].getText(8), items[i].getText(9), items[i].getText(10),
-		            					items[i].getText(11)};
-		            			items[i].dispose();
-		            			TableItem item = new TableItem(tableAllReceipts, SWT.NONE, j);
-		            			item.setText(values);
-		            			items = tableAllReceipts.getItems();
-		            			break;
-		            		}
-		            	}
-		        }
-		    }
-		};
-		tblclmnIssuer.addListener(SWT.Selection, sortListener);
-		tableAllReceipts.setSortColumn(tblclmnIssuer);
-
-		tblclmnAccountant.addListener(SWT.Selection, sortListener);
-		tableAllReceipts.setSortColumn(tblclmnAccountant);
 		
 		Button btnRedeemSelectedReceipt = new Button(shell, SWT.NONE);
 		btnRedeemSelectedReceipt.setFont(subHeaderLabelFont);

@@ -1,9 +1,11 @@
 package org.b_verify.server;
 
+import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
+import java.util.List;
 
-import org.b_verify.common.BVerifyProtocolClient;
-import org.b_verify.common.BVerifyProtocolServer;
+import org.b_verify.common.BVerifyProtocolClientAPI;
+import org.b_verify.common.BVerifyProtocolServerAPI;
 import org.b_verify.common.DummyProof;
 import org.b_verify.common.InsufficientFundsException;
 import org.b_verify.common.Proof;
@@ -14,11 +16,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Responsible for managing server data structures, broadcasting commitments 
- * and constructing proofs for servers. Must be threadsafe
+ * and constructing proofs for servers. Must be threadsafe.
+ * 
  * @author henryaspegren
- *
  */
-public class BVerifyServer implements BVerifyProtocolServer {
+public class BVerifyServer implements BVerifyProtocolServerAPI {
 	
 	private Registry registry;
 	private CatenaServer commitmentPublisher;
@@ -31,43 +33,24 @@ public class BVerifyServer implements BVerifyProtocolServer {
 		this.registry = registry;
 	}
 
-	public boolean transfer(String userTo, String userFrom, int amount) throws InsufficientFundsException {
-		log.info("Transfer request recieved - userTo:"+userTo+" userFrom:"+userFrom+" amount: "+amount);
+	public void startIssueReceipt(byte[] requestIssueMessage) {
+		// TODO Auto-generated method stub
 		
-		try {
-			String[] usersToContact = new String[] {userTo, userFrom};
-			// contact all users
-			for(String user : usersToContact) {
-				log.debug("Looking up "+user+" in java RMI registry");
-	            BVerifyProtocolClient client = (BVerifyProtocolClient) this.registry.lookup(user);
-				log.debug("Calling RMI method on "+user);
-	            Proof respTo = client.proposeTransfer(userTo, userFrom, 
-	            		new DummyProof(userFrom+" -- "+amount+" -- >"+userTo));
-	            log.info("Response from "+user+": "+respTo.toString());
-			}    
-			// for now assume all clients approve and publish commitment 
-            log.info("Transfer success");
-            String stmt = "NEW COMMITMENT! " +System.currentTimeMillis();
-            log.info("Creating new commitment: "+stmt);
-            commitmentPublisher.appendStatement(stmt.getBytes());
-            // TODO - figure out how to best incorporate this.
-            CatenaUtils.generateBlockRegtest();
-            return true;
-            
-		}catch (Exception e){
-			e.printStackTrace();
-		}
-		return false;
 	}
 
-	public Proof getBalance(String user, int time) {
-		log.info("getBalance request recieved - user: "+user+" time: "+ time);
-		return new DummyProof(user+" balance at time: "+time);
+	public void startRedeemReceipt(byte[] requestRedeemMessage) {
+		// TODO Auto-generated method stub
+		
 	}
 
-	public Proof getBalances(int time, boolean changedOnly) {
-		log.info("getBalances request recieved - time: "+ time+ " changedOnly: "+changedOnly);
-		return new DummyProof("user balances at time: "+time+" changed only: "+changedOnly);
+	public void startTransferReceipt(byte[] requestTransferMessage) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public byte[] getUpdates(byte[] updateRequest) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

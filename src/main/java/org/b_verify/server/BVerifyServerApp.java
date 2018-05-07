@@ -5,7 +5,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
-import org.b_verify.common.BVerifyProtocolServer;
+import org.b_verify.common.BVerifyProtocolServerAPI;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.core.ECKey;
@@ -55,7 +55,7 @@ public class BVerifyServerApp {
         	Registry registry = LocateRegistry.createRegistry(1099);
         	
         	BVerifyServer server = new BVerifyServer(registry, catenaServer);
-            BVerifyProtocolServer stub = (BVerifyProtocolServer) UnicastRemoteObject.exportObject(server, 0);
+            BVerifyProtocolServerAPI stub = (BVerifyProtocolServerAPI) UnicastRemoteObject.exportObject(server, 0);
             registry.bind("Server", stub);
             
             log.info("b_verify server READY!");
