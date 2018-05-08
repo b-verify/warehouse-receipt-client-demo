@@ -5,18 +5,16 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
-
-import java.io.IOException;
-import java.rmi.AlreadyBoundException;
-import java.rmi.NotBoundException;
-
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Combo;
+
+import java.util.List;
+import pki.Account;
+import pki.PKIDirectory;
 
 /**
  * Sets up layout of server configuration page to sync to b_verify server.
@@ -29,25 +27,28 @@ public class BVerifyClientConfigGui {
 	private Display display;
 	private final FormToolkit formToolkit = new FormToolkit(Display.getDefault());
 	
-	private Text textServerAddress;
-	private Text textServerTxid;
-	private Combo networkSelector;
-	private Text textClientAddress;
+	private Text textHost;
+	private Text textPort;
+	private Text textUserId;
 	private boolean configured;
-	private BVerifyClientApp bverifyclientapp;
-	private BVerifyClientGui bverifyclientgui;
+	
+	private Account warehouse;
+	private List<Account> depositors;
+	private PKIDirectory pki;
 	
 	private final Font sectionHeaderLabelFont = new Font(display, new FontData(".AppleSystemUIFont", 14, SWT.BOLD));
 	private final Font subHeaderLabelFont = new Font(display, new FontData(".AppleSystemUIFont", 12, SWT.NORMAL));
-	private static final String[] NETWORKS = new String[] { "REGTEST", "TESTNET3", "MAINNET" };
 
 	/**
 	 * Starts the configuration gui.
+	 * @wbp.parser.entryPoint
 	 */
-	public static void start() {
+	public BVerifyClientConfigGui(Account warehouse, List<Account> depositors, PKIDirectory pki) {
+		this.warehouse = warehouse;
+		this.depositors = depositors;
+		this.pki = pki;
 		try {
-			BVerifyClientConfigGui window = new BVerifyClientConfigGui();
-			window.open();
+			this.open();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -73,47 +74,37 @@ public class BVerifyClientConfigGui {
 	 */
 	protected void createContents() {
 		shell = new Shell();
-		shell.setSize(450, 210);
+		shell.setSize(450, 180);
 		shell.setText("B_verify Desktop Client");
 		
-		Label lblClientAddress = new Label(shell, SWT.NONE);
-		lblClientAddress.setFont(subHeaderLabelFont);
-		lblClientAddress.setBounds(30, 36, 96, 22);
-		lblClientAddress.setText("Client Address:");
+		Label lblUserId = new Label(shell, SWT.NONE);
+		lblUserId.setFont(subHeaderLabelFont);
+		lblUserId.setBounds(30, 36, 96, 22);
+		lblUserId.setText("User Id:");
 		
-		Label lblServerAddress = new Label(shell, SWT.NONE);
-		lblServerAddress.setFont(subHeaderLabelFont);
-		lblServerAddress.setBounds(30, 66, 96, 22);
-		lblServerAddress.setText("Server Address:");
+		Label lblHost = new Label(shell, SWT.NONE);
+		lblHost.setFont(subHeaderLabelFont);
+		lblHost.setBounds(30, 66, 96, 22);
+		lblHost.setText("Host:");
 		
-		Label lblServerTxid = new Label(shell, SWT.NONE);
-		lblServerTxid.setFont(subHeaderLabelFont);
-		lblServerTxid.setBounds(30, 94, 96, 22);
-		lblServerTxid.setText("Server Txid:");
+		Label lblPort = new Label(shell, SWT.NONE);
+		lblPort.setFont(subHeaderLabelFont);
+		lblPort.setBounds(30, 94, 96, 22);
+		lblPort.setText("Port:");
 		
-		Label lblNetwork = new Label(shell, SWT.NONE);
-		lblNetwork.setFont(subHeaderLabelFont);
-		lblNetwork.setBounds(30, 123, 96, 22);
-		lblNetwork.setText("Network:");
+		textHost = new Text(shell, SWT.BORDER);
+		textHost.setBounds(132, 64, 308, 22);
 		
-		textServerAddress = new Text(shell, SWT.BORDER);
-		textServerAddress.setBounds(132, 64, 308, 22);
+		textPort = new Text(shell, SWT.BORDER);
+		textPort.setBounds(132, 92, 308, 22);
 		
-		textServerTxid = new Text(shell, SWT.BORDER);
-		textServerTxid.setBounds(132, 92, 308, 22);
-		
-		networkSelector = new Combo(shell, SWT.DROP_DOWN);
-		networkSelector.setBounds(132, 120, 308, 22);
-		networkSelector.setItems(NETWORKS);
-		formToolkit.adapt(networkSelector);
-		
-		textClientAddress = new Text(shell, SWT.BORDER);
-		textClientAddress.setText("<-- set once the sync is started -->");
-		textClientAddress.setBounds(132, 36, 308, 22);
+		textUserId = new Text(shell, SWT.BORDER);
+		textUserId.setText("<-- set once the sync is started -->");
+		textUserId.setBounds(132, 36, 308, 22);
 		
 		Button btnStartSync = new Button(shell, SWT.NONE);
 		btnStartSync.setFont(subHeaderLabelFont);
-		btnStartSync.setBounds(10, 150, 106, 28);
+		btnStartSync.setBounds(10, 122, 106, 28);
 		btnStartSync.setText("Start Sync");
 		
 		Label lblConfiguration = new Label(shell, SWT.NONE);
@@ -131,27 +122,17 @@ public class BVerifyClientConfigGui {
 				if (configured) {
 					System.out.println("ALREADY CONFIGURED");
 				}
-				if (networkSelector.getSelectionIndex() == -1) {
-					System.out.println("NOTHING SELECTED - FAIL ");
-				}
-				String network = networkSelector.getText();
-				String address = textServerAddress.getText();
-				String txid = textServerTxid.getText();
-				configured = true;			
-//				try {
-//					bverifyclientgui = new BVerifyClientGui();
-//					bverifyclientapp = new BVerifyClientApp(address, txid, network, bverifyclientgui);
-//					shell.close();
-//					bverifyclientgui.openWindow(bverifyclientapp);
-//				
-//					// start the client app asynchronously 
-//					Thread tr = new Thread(bverifyclientapp);
-//					tr.start();
-//										
-//				} catch (IOException | AlreadyBoundException | NotBoundException e) {
-//					e.printStackTrace();
-//					System.exit(1);
-//				}
+				String host = textHost.getText();
+				int port = Integer.parseInt(textPort.getText());
+				configured = true;	
+				BVerifyClientDemo bverifyclientdemo = new BVerifyClientDemo(warehouse, depositors, host, port);
+				BVerifyClientApp bverifyclientapp = new BVerifyClientApp(bverifyclientdemo, pki, warehouse);
+				BVerifyClientGui bverifyclientgui = new BVerifyClientGui(bverifyclientapp);
+				shell.close();
+				bverifyclientgui.openWindow();
+				
+				Thread tr = new Thread(bverifyclientapp);
+				tr.start();
 			}
 		};
 		btnStartSync.addListener(SWT.Selection, startSyncListener);

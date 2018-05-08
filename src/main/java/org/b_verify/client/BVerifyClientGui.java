@@ -71,6 +71,7 @@ public class BVerifyClientGui {
 	 */
 	public BVerifyClientGui(BVerifyClientApp bverifyclientapp) {
 		this.bverifyclientapp = bverifyclientapp;
+		this.openWindow();
 	}
 	
 	/**
@@ -121,9 +122,8 @@ public class BVerifyClientGui {
 	
 	// all updates to GUI must be scheduled via the GUI thread 
 	// this is an example
-	public void updateCurrentCommitment(int newCommitmentNumber, String newCommitmentData, String newCommitmentTxnHash) {
+	public void updateCurrentCommitment(final int newCommitmentNumber, final String newCommitmentData, final String newCommitmentTxnHash) {
 		display.asyncExec(new Runnable() {
-			@Override
 			public void run() {
 				labelNumberValue.setText(Integer.toString(newCommitmentNumber).toString());
 				labelCommitDateValue.setText(newCommitmentData);
@@ -331,8 +331,8 @@ public class BVerifyClientGui {
 				
 				JSONObject receiptJSON = createJsonFromReceiptFields();
 				resetProcessNewReceiptFields();
-				bverifyclientapp.initIssueReceipt(receiptJSON);
 				processIssuedReceipt(receiptJSON);
+				bverifyclientapp.initIssueReceipt(receiptJSON);
 			}
 		};
 		btnIssueNewReceipt.addListener(SWT.Selection, issueReceiptButtonListener);

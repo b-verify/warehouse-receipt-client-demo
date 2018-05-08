@@ -2,6 +2,8 @@ package org.b_verify.common;
 
 import java.rmi.Remote;
 
+import org.catena.common.CatenaStatement;
+
 /**
  * The API exposed by b_verify clients to the b_verify server
  * 

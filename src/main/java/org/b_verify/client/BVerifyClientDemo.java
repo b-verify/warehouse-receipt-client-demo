@@ -45,7 +45,6 @@ public class BVerifyClientDemo implements Runnable {
 	private static final Logger logger = Logger.getLogger(BVerifyClientDemo.class.getName());
 
 	private final Account account;
-	
 	private final List<Account> depositors;
 	
 	// data
@@ -56,13 +55,21 @@ public class BVerifyClientDemo implements Runnable {
 	// witnessing 
 	private byte[] currentCommitment;
 	private int currentCommitmentNumber;
-	
+	private static PKIDirectory pki;
+			
 	// gRPC
 	private final ManagedChannel channel;
 	private final BVerifyServerAPIBlockingStub blockingStub;
 	
+	private BVerifyClientGui bverifyclientgui;
+	private BVerifyClientApp bverifyclientapp;
+	
 	public BVerifyClientDemo(Account thisWarehouse, 
 			List<Account> depositors, String host, int port) {
+		
+		ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
+		exec.scheduleAtFixedRate(this, 0, 5, TimeUnit.SECONDS);
+		
 		logger.log(Level.INFO, "...loading mock warehouse connected to server on host: "+host+" port: "+port);
 
 		this.channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
@@ -112,7 +119,7 @@ public class BVerifyClientDemo implements Runnable {
 		this.checkCommitment(this.currentCommitment, this.currentCommitmentNumber);
 		logger.log(Level.INFO, "...setup complete!");
 	}
-	
+
 	/**
 	 * Periodically the mock depositor polls the serve and approves any requests
 	 */
@@ -138,13 +145,13 @@ public class BVerifyClientDemo implements Runnable {
 	    this.channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
 	}
 	
-	public void deposit(Account depositor) {
-		this.deposit(BootstrapMockSetup.generateReceipt(this.account, depositor), depositor);
+	public void deposit(Account recipient) {
+		this.deposit(BootstrapMockSetup.generateReceipt(this.account, recipient), recipient);
 	}
 	
-	public void deposit(Receipt r, Account depositor) {
-		logger.log(Level.INFO, "...depositing receipt: "+r+" to "+depositor.getFirstName());
-		byte[] adsId = CryptographicUtils.listOfAccountsToADSKey(Arrays.asList(this.account, depositor));
+	public void deposit(Receipt r, Account recipient) {
+		logger.log(Level.INFO, "...issuing receipt: " + r + " to " + recipient.getFirstName());
+		byte[] adsId = CryptographicUtils.listOfAccountsToADSKey(Arrays.asList(this.account, recipient));
 		String adsIdString = Utils.byteArrayAsHexString(adsId);
 		if(!this.adsKeyToADS.containsKey(adsIdString)) {
 			throw new RuntimeException("not a valid depositor");
@@ -155,7 +162,7 @@ public class BVerifyClientDemo implements Runnable {
 		byte[] receiptWitness = CryptographicUtils.witnessReceipt(r);
 		ads.insert(receiptWitness);
 		byte[] newRoot = ads.commitment();
-		logger.log(Level.INFO, "...new ads root: "+Utils.byteArrayAsHexString(newRoot));
+		logger.log(Level.INFO, "...new ads root: " + Utils.byteArrayAsHexString(newRoot));
 		byte[] signature = CryptographicSignature.sign(newRoot, this.account.getPrivateKey());
 		
 		IssueReceiptRequest request = IssueReceiptRequest.newBuilder()
@@ -165,7 +172,7 @@ public class BVerifyClientDemo implements Runnable {
 		
 		ForwardRequest requestToForward = ForwardRequest.newBuilder()
 				.setRequest(request)
-				.setForwardToId(depositor.getIdAsString())
+				.setForwardToId(recipient.getIdAsString())
 				.build();
 		logger.log(Level.INFO, "...forwarding request to client via server");
 		this.blockingStub.forward(requestToForward);
@@ -205,7 +212,6 @@ public class BVerifyClientDemo implements Runnable {
 		return res;
 	}
 	
-	
 	private boolean checkCommitment(byte[] commitment, int commitmentNumber) {
 		logger.log(Level.INFO, "...checking commtiment : #"+commitmentNumber+
 				" | "+Utils.byteArrayAsHexString(commitment));
@@ -241,13 +247,14 @@ public class BVerifyClientDemo implements Runnable {
 			throw new RuntimeException("bad proof!");
 		}
 	}
-
 	
 	public static void main(String[] args) {
-		String base = System.getProperty("user.dir")  + "/demos/";
-		PKIDirectory pki = new PKIDirectory(base+"pki/");
-		String host = "127.0.0.1";
-		int port = 50051;
+		//String base = System.getProperty("user.dir")  + "/demos/";
+		String base = "/Users/Binh/Desktop/UROP/b_verify-server-demo/demos/";
+
+		System.out.println(base);
+		pki = new PKIDirectory(base+"pki/");
+
 		/**
 		 * Alice: 59d6dd79-4bbe-4043-ba3e-e2a91e2376ae
 		 * Bob: b132bbfa-98bc-4e5d-b32d-f78d603600f5
@@ -260,14 +267,7 @@ public class BVerifyClientDemo implements Runnable {
 		List<Account> depositors = new ArrayList<>();
 		depositors.add(alice);
 		depositors.add(bob);
-		BVerifyClientDemo warehouseClient = new BVerifyClientDemo(warehouse, depositors, host, port);
-		
-		ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
-		exec.scheduleAtFixedRate(warehouseClient, 0, 5, TimeUnit.SECONDS);
-		
-		BVerifyClientApp bverifyclientapp = new BVerifyClientApp(warehouseClient, pki, warehouse);
-		BVerifyClientGui bverifyclientgui = new BVerifyClientGui(bverifyclientapp);
-		bverifyclientgui.openWindow();
+		BVerifyClientConfigGui bverifyclientconfiggui = new BVerifyClientConfigGui(warehouse, depositors, pki);
 	}
 }
 

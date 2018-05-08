@@ -35,6 +35,7 @@ public class BVerifyClientApp implements Runnable {
 	
 	public BVerifyClientApp(BVerifyClientDemo bverifyclientdemo, PKIDirectory pki, Account client) {
 		this.bverifyclientdemo = bverifyclientdemo;
+		this.pki = pki;
 		clientIdString = client.getIdAsString();
 		log.info("Setting up b_verify client with id: "+ clientIdString);
 	}
@@ -47,14 +48,14 @@ public class BVerifyClientApp implements Runnable {
 				.setCategory(receiptJSON.get("category").toString())
 				.setDate(receiptJSON.get("date").toString())
 				.setInsurance(receiptJSON.get("insurance").toString())
-				.setWeight((double)receiptJSON.get("weight"))
-				.setVolume((double)receiptJSON.get("volume"))
-				.setHumidity((double)receiptJSON.get("humidity"))
-				.setPrice((double)receiptJSON.get("price"))
+				.setWeight(Double.parseDouble(receiptJSON.get("weight").toString()))
+				.setVolume(Double.parseDouble(receiptJSON.get("volume").toString()))
+				.setHumidity(Double.parseDouble(receiptJSON.get("humidity").toString()))
+				.setPrice(Double.parseDouble(receiptJSON.get("price").toString()))
 				.setDetails(receiptJSON.get("details").toString())
 				.build();
-		Account depositor = pki.getAccount(receiptJSON.get("depositor").toString());
-		bverifyclientdemo.deposit(receipt, depositor);
+		Account recipient = pki.getAccount(receiptJSON.get("recipient").toString());
+		bverifyclientdemo.deposit(receipt, recipient);
 	}
 	
 	public String getClientIdString() {
