@@ -249,8 +249,8 @@ public class BVerifyClientDemo implements Runnable {
 	}
 	
 	public static void main(String[] args) {
-		//String base = System.getProperty("user.dir")  + "/demos/";
-		String base = "/Users/Binh/Desktop/UROP/b_verify-server-demo/demos/";
+		String base = System.getProperty("user.dir")  + "/demos/";
+		//String base = "/Users/Binh/Desktop/UROP/b_verify-server-demo/demos/";
 
 		System.out.println(base);
 		pki = new PKIDirectory(base+"pki/");
