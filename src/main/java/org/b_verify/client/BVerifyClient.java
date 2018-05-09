@@ -1,12 +1,9 @@
 package org.b_verify.client;
 
-import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.b_verify.common.BVerifyCommitment;
-import org.b_verify.common.BVerifyProtocolClientAPI;
-import org.b_verify.common.BVerifyProtocolServerAPI;
 import org.catena.client.CatenaStatementListener;
 import org.catena.common.CatenaStatement;
 import org.slf4j.Logger;
@@ -20,21 +17,19 @@ import org.slf4j.LoggerFactory;
  * 
  * @author binhle
  */
-public class BVerifyClient implements BVerifyProtocolClientAPI, CatenaStatementListener {
+public class BVerifyClient implements CatenaStatementListener {
 
 	private final List<BVerifyCommitment> commitments;
 	private final String clientName;
-	private final BVerifyProtocolServerAPI server;
 	private final BVerifyClientGui appgui;
 	
 	/** Debugging - use this instead of printing to Standard out **/
     private static final Logger log = LoggerFactory.getLogger(BVerifyClient.class);
 
-	public BVerifyClient(String name, BVerifyProtocolServerAPI srvr, BVerifyClientGui gui) {
+	public BVerifyClient(String name, BVerifyClientGui gui) {
 		appgui = gui;
 		commitments = new ArrayList<BVerifyCommitment>();
         clientName = name;
-        server = srvr;
 	}
 
 	@Override
@@ -45,7 +40,6 @@ public class BVerifyClient implements BVerifyProtocolClientAPI, CatenaStatementL
 		BVerifyCommitment commitment = new BVerifyCommitment(commitmentNumber, s.getData(), 
 				s.getTxHash());
 		this.commitments.add(commitment);
-		
 		
 		// ask server for a proof
 //		try {
@@ -59,7 +53,7 @@ public class BVerifyClient implements BVerifyProtocolClientAPI, CatenaStatementL
 		// assume it succeeds (for now)
 		log.debug("Proof succeeded - commitment verified - updating ux");
 		// update the gui
-		appgui.updateCurrentCommitment(commitment.getCommitmentNumber(), new String(commitment.getCommitmentData()),commitment.getCommitmentTxnHash().toString());		
+		//appgui.updateCurrentCommitment(commitment.getCommitmentNumber(), new String(commitment.getCommitmentData()),commitment.getCommitmentTxnHash().toString());		
 	}
 
 	@Override
@@ -69,34 +63,4 @@ public class BVerifyClient implements BVerifyProtocolClientAPI, CatenaStatementL
 		log.warn("REORG - feature not implemented yet - crashing program");
 		System.exit(1);		
 	}
-
-	@Override
-	public byte[] approveReceiptIssue(byte[] approveIssueMessage) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public byte[] approveReceiptRedeem(byte[] approveRedeemMessage) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public byte[] approveReceiptTransfer(byte[] approveTransferMessage) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-//	@Override
-//	public byte[] approveDeposit(byte[] request) throws RemoteException {
-//		// TODO Auto-generated method stub
-//		return null;
-//	}
-//
-//	@Override
-//	public void addNewCommitment(byte[] commitment) throws RemoteException {
-//		// TODO Auto-generated method stub
-//		
-//	}
 }

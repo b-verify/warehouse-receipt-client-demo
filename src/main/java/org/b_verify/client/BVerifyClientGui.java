@@ -1,6 +1,9 @@
 package org.b_verify.client;
 
-import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Font;
@@ -20,6 +23,8 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.json.*;
 
+import io.grpc.bverify.Receipt;
+
 /**
  * Handles the layout of the b_verify desktop client gui where clients can
  * find last commitment information, process new receipts, browse all receipts,
@@ -30,38 +35,40 @@ import org.json.*;
 public class BVerifyClientGui {
 
 	protected Shell shell;
-	private Display display;
+	private static Display display;
 	private final FormToolkit formToolkit = new FormToolkit(Display.getDefault());
 	private final Font sectionHeaderLabelFont = new Font(display, new FontData(".AppleSystemUIFont", 14, SWT.BOLD));
 	private final Font subHeaderLabelFont = new Font(display, new FontData(".AppleSystemUIFont", 12, SWT.NORMAL));
 	
+	private BVerifyClientApp bverifyclientapp;
+	private BVerifyClientReadScale bverifyclientreadscale;
+	
 	// last commitment section variables
 	private Label labelClientIdValue;
-	private Label labelNumberValue;
-	private Label labelCommitDateValue;
-	private Label labelTxnHashValue;
-	private BVerifyClientApp bverifyclientapp;
+	private static Label labelNumberValue;
+	private static Label labelCommitmentValue;
+	private static Label labelCommitDateTimeValue;
 	
 	// process new receipt section variables
 	private Text textIssuer;
 	private Text textAccountant;
-	private Text textRecipient;
 	private Text textDepositor;
 	private Combo categorySelector;
+	private Label lblDateTime;
 	private static final String[] CATEGORIES = new String[] { "corn", "soy", "wheat" };
-	private Text textDate;
 	private Combo insuranceSelector;
 	private static final String[] INSURANCES = new String[] { "full coverage", "against fire", "against theft", "not covered" };
-	private Text textWeight;
+	private static Text textWeight;
 	private Text textVolume;
 	private Text textHumidity;
 	private Text textPrice;
 	private Text textOtherDetails;
 	
 	// all receipts section variables
-	private Table tableAllReceipts;
-	private Label lblLastUpdatedTime;
-	private static final String[] ALL_RECEIPT_COLUMNS = {"issuer", "accountant", "recipient", "depositor", 
+	private static ArrayList<JSONObject> receiptsToAdd = new ArrayList<JSONObject>();
+	private static Table tableAllReceipts;
+	private static Label lblLastUpdatedTime;
+	private static final String[] ALL_RECEIPT_COLUMNS = {"issuer", "accountant", "depositor", 
 			"category", "date", "insurance", "weight", "volume", "humidity", "price", "details"};
 	private static final int ALL_RECEIPT_COLUMN_COUNT = ALL_RECEIPT_COLUMNS.length;
 
@@ -69,9 +76,9 @@ public class BVerifyClientGui {
 	 * 
 	 * @param bverifyclientapp
 	 */
-	public BVerifyClientGui(BVerifyClientApp bverifyclientapp) {
+	public BVerifyClientGui(BVerifyClientApp bverifyclientapp, BVerifyClientReadScale bverifyclientreadscale) {
 		this.bverifyclientapp = bverifyclientapp;
-		this.openWindow();
+		this.bverifyclientreadscale = bverifyclientreadscale;
 	}
 	
 	/**
@@ -81,9 +88,13 @@ public class BVerifyClientGui {
 	public void openWindow() {
 		display = Display.getDefault();
 		createContents();
-		shell.open();
-		shell.layout();
+		// Process existing receipts
+		processIssuedReceipt();
+		bverifyclientreadscale.setReadingValueFound(false);
 		
+		shell.open();
+		shell.layout();		
+
 		setClientAddress(bverifyclientapp.getClientIdString());
 		
 		while (!shell.isDisposed()) {
@@ -98,7 +109,7 @@ public class BVerifyClientGui {
 	 */
 	protected void createContents() {
 		shell = new Shell();
-		shell.setSize(1200, 650);
+		shell.setSize(1200, 630);
 		shell.setText("B_verify Desktop Client");
 		
 		// Create Last Commitment Section
@@ -122,12 +133,14 @@ public class BVerifyClientGui {
 	
 	// all updates to GUI must be scheduled via the GUI thread 
 	// this is an example
-	public void updateCurrentCommitment(final int newCommitmentNumber, final String newCommitmentData, final String newCommitmentTxnHash) {
+	public static void updateCurrentCommitment(final int newCommitmentNumber, final byte[] newCommitment, final String commitmentTime) {
 		display.asyncExec(new Runnable() {
+			@Override
 			public void run() {
 				labelNumberValue.setText(Integer.toString(newCommitmentNumber).toString());
-				labelCommitDateValue.setText(newCommitmentData);
-				labelTxnHashValue.setText(newCommitmentTxnHash);
+				labelCommitmentValue.setText(newCommitment.toString());
+				labelCommitDateTimeValue.setText(commitmentTime);
+				processIssuedReceipt();
 			}
 		});
 	}
@@ -156,17 +169,17 @@ public class BVerifyClientGui {
 		labelNumber.setBounds(30, 70, 90, 24);
 		formToolkit.adapt(labelNumber, true, true);
 		
-		Label labelCommitDate = new Label(shell, SWT.NONE);
-		labelCommitDate.setText("Date:");
-		labelCommitDate.setFont(subHeaderLabelFont);
-		labelCommitDate.setBounds(30, 100, 90, 24);
-		formToolkit.adapt(labelCommitDate, true, true);
+		Label labelCommitment = new Label(shell, SWT.NONE);
+		labelCommitment.setText("Commitment");
+		labelCommitment.setFont(subHeaderLabelFont);
+		labelCommitment.setBounds(30, 100, 90, 24);
+		formToolkit.adapt(labelCommitment, true, true);
 		
-		Label labelTxnHash = new Label(shell, SWT.NONE);
-		labelTxnHash.setText("Txn Hash:");
-		labelTxnHash.setFont(subHeaderLabelFont);
-		labelTxnHash.setBounds(30, 130, 90, 24);
-		formToolkit.adapt(labelTxnHash, true, true);
+		Label labelCommitDateTime = new Label(shell, SWT.NONE);
+		labelCommitDateTime.setText("Time:");
+		labelCommitDateTime.setFont(subHeaderLabelFont);
+		labelCommitDateTime.setBounds(30, 130, 90, 24);
+		formToolkit.adapt(labelCommitDateTime, true, true);
 		
 		labelClientIdValue = new Label(shell, SWT.NONE);
 		labelClientIdValue.setText("N/A");
@@ -178,15 +191,15 @@ public class BVerifyClientGui {
 		labelNumberValue.setBounds(126, 70, 314, 24);
 		formToolkit.adapt(labelNumberValue, true, true);
 		
-		labelCommitDateValue = new Label(shell, SWT.NONE);
-		labelCommitDateValue.setText("N/A");
-		labelCommitDateValue.setBounds(126, 100, 314, 24);
-		formToolkit.adapt(labelCommitDateValue, true, true);
+		labelCommitmentValue = new Label(shell, SWT.NONE);
+		labelCommitmentValue.setText("N/A");
+		labelCommitmentValue.setBounds(126, 100, 314, 24);
+		formToolkit.adapt(labelCommitmentValue, true, true);
 		
-		labelTxnHashValue = new Label(shell, SWT.NONE);
-		labelTxnHashValue.setText("N/A");
-		labelTxnHashValue.setBounds(126, 130, 314, 24);
-		formToolkit.adapt(labelTxnHashValue, true, true);
+		labelCommitDateTimeValue = new Label(shell, SWT.NONE);
+		labelCommitDateTimeValue.setText("N/A");
+		labelCommitDateTimeValue.setBounds(126, 130, 314, 24);
+		formToolkit.adapt(labelCommitDateTimeValue, true, true);
 	}
 	
 	/**
@@ -221,109 +234,101 @@ public class BVerifyClientGui {
 		textAccountant.setBounds(131, 266, 314, 24);
 		formToolkit.adapt(textAccountant, true, true);
 		
-		Label labelRecipient = new Label(shell, SWT.NONE);
-		labelRecipient.setText("Recipient:");
-		labelRecipient.setFont(subHeaderLabelFont);
-		labelRecipient.setBounds(30, 296, 90, 24);
-		formToolkit.adapt(labelRecipient, true, true);
-		
-		textRecipient = new Text(shell, SWT.BORDER);
-		textRecipient.setBounds(131, 296, 314, 24);
-		
 		Label labelDepositor = new Label(shell, SWT.NONE);
 		labelDepositor.setText("Depositor:");
 		labelDepositor.setFont(subHeaderLabelFont);
-		labelDepositor.setBounds(30, 326, 90, 24);
+		labelDepositor.setBounds(30, 296, 90, 24);
 		formToolkit.adapt(labelDepositor, true, true);
 		
 		textDepositor = new Text(shell, SWT.BORDER);
-		textDepositor.setBounds(131, 326, 314, 23);
+		textDepositor.setBounds(131, 296, 314, 23);
 		formToolkit.adapt(textDepositor, true, true);
 		
 		Label labelCategory = new Label(shell, SWT.NONE);
 		labelCategory.setText("Category:");
 		labelCategory.setFont(subHeaderLabelFont);
-		labelCategory.setBounds(30, 356, 90, 24);
+		labelCategory.setBounds(30, 326, 90, 24);
 		formToolkit.adapt(labelCategory, true, true);
 		
 		categorySelector = new Combo(shell, SWT.DROP_DOWN);
-		categorySelector.setBounds(131, 356, 314, 24);
+		categorySelector.setBounds(131, 325, 314, 24);
 		categorySelector.setItems(CATEGORIES);
 		formToolkit.adapt(categorySelector);
 		
-		Label labelDate = new Label(shell, SWT.NONE);
-		labelDate.setText("Date:");
-		labelDate.setFont(subHeaderLabelFont);
-		labelDate.setBounds(30, 386, 90, 24);
-		formToolkit.adapt(labelDate, true, true);
+		Label labelDateTime = new Label(shell, SWT.NONE);
+		labelDateTime.setText("Date/Time:");
+		labelDateTime.setFont(subHeaderLabelFont);
+		labelDateTime.setBounds(30, 356, 90, 24);
+		formToolkit.adapt(labelDateTime, true, true);
 		
-		textDate = new Text(shell, SWT.BORDER);
-		textDate.setText("dd/mm/yyyy");
-		textDate.setBounds(131, 386, 314, 23);
+		lblDateTime = new Label(shell, SWT.NONE);
+		lblDateTime.setBounds(131, 356, 314, 23);
+		formToolkit.adapt(lblDateTime, true, true);
+		lblDateTime.setText("<-- Date/Time of Depositor Receipt Approval -->");
 		
 		Label labelInsurance = new Label(shell, SWT.NONE);
 		labelInsurance.setText("Insurance:");
 		labelInsurance.setFont(subHeaderLabelFont);
-		labelInsurance.setBounds(30, 414, 90, 24);
+		labelInsurance.setBounds(30, 386, 90, 24);
 		formToolkit.adapt(labelInsurance, true, true);
 		
 		insuranceSelector = new Combo(shell, SWT.DROP_DOWN);
-		insuranceSelector.setBounds(131, 414, 314, 24);
+		insuranceSelector.setBounds(131, 386, 314, 24);
 		insuranceSelector.setItems(INSURANCES);
 		formToolkit.adapt(insuranceSelector);
 		
 		Label labelWeight = new Label(shell, SWT.NONE);
 		labelWeight.setText("Weight (kg):");
 		labelWeight.setFont(subHeaderLabelFont);
-		labelWeight.setBounds(30, 444, 90, 24);
+		labelWeight.setBounds(30, 416, 90, 24);
 		formToolkit.adapt(labelWeight, true, true);
 		
 		textWeight = new Text(shell, SWT.BORDER);
-		textWeight.setBounds(131, 444, 314, 24);
+		textWeight.setBounds(131, 416, 314, 24);
 		
 		Label labelVolume = new Label(shell, SWT.NONE);
 		labelVolume.setText("Volume (m^3):");
 		labelVolume.setFont(subHeaderLabelFont);
-		labelVolume.setBounds(30, 474, 90, 24);
+		labelVolume.setBounds(30, 446, 90, 24);
 		formToolkit.adapt(labelVolume, true, true);
 		
 		textVolume = new Text(shell, SWT.BORDER);
-		textVolume.setBounds(131, 474, 314, 24);
+		textVolume.setBounds(131, 446, 314, 24);
 		
 		Label labelHumidity = new Label(shell, SWT.NONE);
 		labelHumidity.setText("Humidity (%):");
 		labelHumidity.setFont(subHeaderLabelFont);
-		labelHumidity.setBounds(30, 504, 90, 24);
+		labelHumidity.setBounds(30, 476, 90, 24);
 		formToolkit.adapt(labelHumidity, true, true);
 		
 		textHumidity = new Text(shell, SWT.BORDER);
-		textHumidity.setBounds(131, 504, 314, 24);
+		textHumidity.setBounds(131, 476, 314, 24);
 		formToolkit.adapt(textHumidity, true, true);
 		
 		Label labelPrice = new Label(shell, SWT.NONE);
 		labelPrice.setText("Price (USD):");
 		labelPrice.setFont(subHeaderLabelFont);
-		labelPrice.setBounds(30, 534, 90, 24);
+		labelPrice.setBounds(30, 506, 90, 24);
 		formToolkit.adapt(labelPrice, true, true);
 		
 		textPrice = new Text(shell, SWT.BORDER);
-		textPrice.setBounds(131, 534, 314, 24);
+		textPrice.setBounds(131, 506, 314, 24);
 		formToolkit.adapt(textPrice, true, true);
 		
 		Label labelOtherDetails = new Label(shell, SWT.NONE);
 		labelOtherDetails.setText("Other Details:");
 		labelOtherDetails.setFont(subHeaderLabelFont);
-		labelOtherDetails.setBounds(30, 564, 90, 24);
+		labelOtherDetails.setBounds(30, 536, 90, 24);
 		formToolkit.adapt(labelOtherDetails, true, true);
 		
 		textOtherDetails = new Text(shell, SWT.BORDER);
-		textOtherDetails.setBounds(131, 564, 314, 24);
+		textOtherDetails.setBounds(131, 536, 314, 24);
 		textOtherDetails.setText("n/a");
 		formToolkit.adapt(textOtherDetails, true, true);
 		
 		Button btnIssueNewReceipt = new Button(shell, SWT.NONE);
 		btnIssueNewReceipt.setFont(subHeaderLabelFont);
-		btnIssueNewReceipt.setBounds(10, 594, 187, 24);
+		btnIssueNewReceipt.setBounds(10, 574, 187, 24);
 		btnIssueNewReceipt.setText("Issue New Receipt");
 	
 		Listener issueReceiptButtonListener = new Listener() {
@@ -331,8 +336,15 @@ public class BVerifyClientGui {
 				
 				JSONObject receiptJSON = createJsonFromReceiptFields();
 				resetProcessNewReceiptFields();
-				processIssuedReceipt(receiptJSON);
+				receiptsToAdd.add(receiptJSON);
 				bverifyclientapp.initIssueReceipt(receiptJSON);
+				
+				int style = SWT.ICON_INFORMATION;
+				MessageBox messageBox = new MessageBox(shell, style);
+				messageBox.setText("NOTICE");
+				messageBox.setMessage("An issue receipt request was sent to the depositor. It will appear in the ALL RECEIPTS table when the depositor approves the request.");
+				messageBox.open();
+				bverifyclientreadscale.setReadingValueFound(false);
 			}
 		};
 		btnIssueNewReceipt.addListener(SWT.Selection, issueReceiptButtonListener);
@@ -343,13 +355,14 @@ public class BVerifyClientGui {
 	 * @return JSONObject with data from receipt fields.
 	 */
 	private JSONObject createJsonFromReceiptFields() {
-		JSONObject obj = new JSONObject();
+		Date currentDate = new Date();
+
+	    JSONObject obj = new JSONObject();
         obj.put("issuer", textIssuer.getText());
         obj.put("accountant", textAccountant.getText());
-        obj.put("recipient", textRecipient.getText());
         obj.put("depositor", textDepositor.getText());
         obj.put("category", categorySelector.getText());
-        obj.put("date", textDate.getText());
+        obj.put("date", currentDate.toString());
         obj.put("insurance", insuranceSelector.getText());
         obj.put("weight", textWeight.getText());
         obj.put("volume", textVolume.getText());
@@ -364,10 +377,8 @@ public class BVerifyClientGui {
 	private void resetProcessNewReceiptFields() {
 		textIssuer.setText("");
 		textAccountant.setText("");
-		textRecipient.setText("");
 		textDepositor.setText("");
 		categorySelector.setText("");
-		textDate.setText("dd/mm/yyyy");
 		insuranceSelector.setText("");
 		textWeight.setText("");
 		textVolume.setText("");
@@ -389,7 +400,7 @@ public class BVerifyClientGui {
 		lblAllReceipts.setText("ALL RECEIPTS");
 		
 		tableAllReceipts = new Table(shell, SWT.BORDER | SWT.FULL_SELECTION);
-		tableAllReceipts.setBounds(500, 40, 690, 548);
+		tableAllReceipts.setBounds(500, 40, 690, 520);
 		tableAllReceipts.setHeaderVisible(true);
 		tableAllReceipts.setLinesVisible(true);
 		
@@ -400,10 +411,6 @@ public class BVerifyClientGui {
 		TableColumn tblclmnAccountant = new TableColumn(tableAllReceipts, SWT.CENTER);
 		tblclmnAccountant.setWidth(100);
 		tblclmnAccountant.setText("Accountant");
-		
-		TableColumn tblclmnRecipient = new TableColumn(tableAllReceipts, SWT.CENTER);
-		tblclmnRecipient.setWidth(100);
-		tblclmnRecipient.setText("Recipient");
 		
 		TableColumn tblclmnDepositor = new TableColumn(tableAllReceipts, SWT.CENTER);
 		tblclmnDepositor.setWidth(100);
@@ -443,17 +450,17 @@ public class BVerifyClientGui {
 		
 		Button btnRedeemSelectedReceipt = new Button(shell, SWT.NONE);
 		btnRedeemSelectedReceipt.setFont(subHeaderLabelFont);
-		btnRedeemSelectedReceipt.setBounds(500, 594, 187, 24);
+		btnRedeemSelectedReceipt.setBounds(500, 574, 187, 24);
 		btnRedeemSelectedReceipt.setText("Redeem Selected Receipt");
 		
 		Label lblLastUpdated = new Label(shell, SWT.NONE);
 		lblLastUpdated.setFont(subHeaderLabelFont);
-		lblLastUpdated.setBounds(789, 594, 85, 24);
+		lblLastUpdated.setBounds(789, 577, 85, 24);
 		lblLastUpdated.setText("Last Updated:");
 		
 		lblLastUpdatedTime = new Label(shell, SWT.NONE);
 		lblLastUpdated.setFont(subHeaderLabelFont);
-		lblLastUpdatedTime.setBounds(880, 594, 310, 24);
+		lblLastUpdatedTime.setBounds(880, 578, 310, 24);
 		lblLastUpdatedTime.setText("N/A");
 		
 		Listener redeemReceiptButtonListener = new Listener() {
@@ -462,7 +469,7 @@ public class BVerifyClientGui {
 				MessageBox messageBox = new MessageBox(shell, SWT.ICON_QUESTION
 			            | SWT.YES | SWT.NO);
 		        messageBox.setText("CONFIRMATION");
-			    messageBox.setMessage("Do you really want to redeem this receipt?");
+			    messageBox.setMessage("Are you sure you want to redeem this receipt?");
 			    int response = messageBox.open();
 			    if (response == SWT.YES) {
 			    		// Get selected receiptJSON from table.
@@ -487,8 +494,8 @@ public class BVerifyClientGui {
 					tableAllReceipts.remove(tableAllReceipts.getSelectionIndices());
 					
 				    // Update last updated time.
-				    String currentTime = LocalDateTime.now().toString();
-				    lblLastUpdatedTime.setText(currentTime);
+					Date currentDate = new Date();
+				    lblLastUpdatedTime.setText(currentDate.toString());
 			    }
 			}
 		};
@@ -497,23 +504,81 @@ public class BVerifyClientGui {
 	
 	/**
 	 * Process issued receipt for it to be reflected in all receipts table.
-	 * @param receiptMap map storing receipt data labels as keys and data values as values.
 	 */
-	private void processIssuedReceipt(JSONObject receiptJSON) {
+	private static void processIssuedReceipt() {
+		
 		// Find new mappings of values to columns in all receipts table.
 		String[] dataValueIndices = new String[ALL_RECEIPT_COLUMN_COUNT];
-		for (int i=0; i< ALL_RECEIPT_COLUMN_COUNT; i++) {
-			String currentDataValue = receiptJSON.getString(ALL_RECEIPT_COLUMNS[i]);
-			dataValueIndices[i] = currentDataValue;
+		for (int j=0; j< receiptsToAdd.size(); j++) {
+			JSONObject receiptJSON = receiptsToAdd.get(j);
+			for (int i=0; i< ALL_RECEIPT_COLUMN_COUNT; i++) {
+				String currentDataValue = receiptJSON.getString(ALL_RECEIPT_COLUMNS[i]);
+				dataValueIndices[i] = currentDataValue;
+			}
+			// Create and add table item to table.
+			TableItem item = new TableItem(tableAllReceipts, SWT.NONE);
+		    item.setText(new String[] { dataValueIndices[0], dataValueIndices[1], dataValueIndices[2], dataValueIndices[3], dataValueIndices[4],
+		    		dataValueIndices[5], dataValueIndices[6], dataValueIndices[7], dataValueIndices[8], dataValueIndices[9],
+		    		dataValueIndices[10]});
 		}
-		// Create and add table item to table.
-		TableItem item = new TableItem(tableAllReceipts, SWT.NONE);
-	    item.setText(new String[] { dataValueIndices[0], dataValueIndices[1], dataValueIndices[2], dataValueIndices[3], dataValueIndices[4],
-	    		dataValueIndices[5], dataValueIndices[6], dataValueIndices[7], dataValueIndices[8], dataValueIndices[9],
-	    		dataValueIndices[10], dataValueIndices[11]});
-	    
-	    // Update last updated time.
-	    String currentTime = LocalDateTime.now().toString();
-	    lblLastUpdatedTime.setText(currentTime);
+		receiptsToAdd.clear();
+		Date currentDate = new Date();
+	    lblLastUpdatedTime.setText(currentDate.toString());
+	}
+
+	/**
+	 * Get the existing receipts from the ADS before client gui opens.
+	 * @param adsKeyToADSData
+	 */
+	public static void getExistingReceipts(Map<String, Set<Receipt>> adsKeyToADSData) {
+		for (Set<Receipt> receiptSet : adsKeyToADSData.values()) {
+			for (Receipt receipt: receiptSet) {
+				JSONObject jsonReceipt = convertReceiptToJson(receipt);
+				receiptsToAdd.add(jsonReceipt);
+			}
+		}
+	}
+
+	/**
+	 * Convert Receipt into JSONObject
+	 * @param Receipt receipt
+	 * @return JSONObject receipt
+	 */
+	private static JSONObject convertReceiptToJson(Receipt receipt) {
+		String warehouseName = "Warehouse";
+		String depositorName = "";
+		if (receipt.getDepositorId().equals("7795ad85-9a9e-47a4-b7fc-4a58c8697d21")) {
+			depositorName = "Alice";
+		}
+		if (receipt.getDepositorId().equals("495ead33-b08d-4a47-adf0-b4664043f762")) {
+			depositorName = "Bob";
+		}
+		JSONObject jsonReceipt = new JSONObject();
+		jsonReceipt.put("issuer", warehouseName);
+		jsonReceipt.put("accountant", receipt.getAccountant());
+		jsonReceipt.put("depositor", depositorName);
+		jsonReceipt.put("category", receipt.getCategory());
+		jsonReceipt.put("date", receipt.getDate());
+		jsonReceipt.put("insurance", receipt.getInsurance());
+		jsonReceipt.put("weight", Double.toString(receipt.getWeight()));
+		jsonReceipt.put("volume", Double.toString(receipt.getVolume()));
+		jsonReceipt.put("humidity", Double.toString(receipt.getHumidity()));
+		jsonReceipt.put("price", Double.toString(receipt.getPrice()));
+		jsonReceipt.put("details", receipt.getDetails());
+		return jsonReceipt;
+	}
+	
+	/**
+	 * Gets the reading from dymo scale.
+	 * @param scaleReading
+	 */
+	public static void updateScaleReading(String scaleReading) {
+		display.asyncExec(new Runnable() {
+			@Override
+			public void run() {
+				textWeight.setText(scaleReading);
+			}
+		});
+
 	}
 }

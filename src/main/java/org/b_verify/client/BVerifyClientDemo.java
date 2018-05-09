@@ -2,6 +2,7 @@ package org.b_verify.client;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -61,15 +62,11 @@ public class BVerifyClientDemo implements Runnable {
 	private final ManagedChannel channel;
 	private final BVerifyServerAPIBlockingStub blockingStub;
 	
-	private BVerifyClientGui bverifyclientgui;
-	private BVerifyClientApp bverifyclientapp;
-	
 	public BVerifyClientDemo(Account thisWarehouse, 
 			List<Account> depositors, String host, int port) {
 		
-		ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
-		exec.scheduleAtFixedRate(this, 0, 5, TimeUnit.SECONDS);
-		
+		// hubris ip: 18.85.22.252
+		// hubris port: 50051
 		logger.log(Level.INFO, "...loading mock warehouse connected to server on host: "+host+" port: "+port);
 
 		this.channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
@@ -118,6 +115,11 @@ public class BVerifyClientDemo implements Runnable {
 		logger.log(Level.INFO, "...asking for a proof, checking latest commitment");
 		this.checkCommitment(this.currentCommitment, this.currentCommitmentNumber);
 		logger.log(Level.INFO, "...setup complete!");
+		
+		ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
+		exec.scheduleAtFixedRate(this, 0, 5, TimeUnit.SECONDS);
+		
+		BVerifyClientGui.getExistingReceipts(adsKeyToADSData);
 	}
 
 	/**
@@ -125,7 +127,7 @@ public class BVerifyClientDemo implements Runnable {
 	 */
 	@Override
 	public void run() {
-		logger.log(Level.INFO, "...polling sever for new commitments");
+		logger.log(Level.INFO, "...polling server for new commitments");
 		List<byte[]> commitments  = this.getCommitments();
 		// get the new commitments if any
 		List<byte[]> newCommitments = commitments.subList(this.currentCommitmentNumber+1, commitments.size());
@@ -137,6 +139,8 @@ public class BVerifyClientDemo implements Runnable {
 				logger.log(Level.INFO, "...check commitment result:" + result);
 				this.currentCommitmentNumber = newCommitmentNumber;
 				this.currentCommitment = newCommitment;
+				Date commitmentDate = new Date();
+				BVerifyClientGui.updateCurrentCommitment(newCommitmentNumber, newCommitment, commitmentDate.toString());
 			}
 		}
 	}
@@ -145,13 +149,13 @@ public class BVerifyClientDemo implements Runnable {
 	    this.channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
 	}
 	
-	public void deposit(Account recipient) {
-		this.deposit(BootstrapMockSetup.generateReceipt(this.account, recipient), recipient);
+	public void deposit(Account depositor) {
+		this.deposit(BootstrapMockSetup.generateReceipt(this.account, depositor), depositor);
 	}
 	
-	public void deposit(Receipt r, Account recipient) {
-		logger.log(Level.INFO, "...issuing receipt: " + r + " to " + recipient.getFirstName());
-		byte[] adsId = CryptographicUtils.listOfAccountsToADSKey(Arrays.asList(this.account, recipient));
+	public void deposit(Receipt r, Account depositor) {
+		logger.log(Level.INFO, "...issuing receipt: " + r + " to " + depositor.getFirstName());
+		byte[] adsId = CryptographicUtils.listOfAccountsToADSKey(Arrays.asList(this.account, depositor));
 		String adsIdString = Utils.byteArrayAsHexString(adsId);
 		if(!this.adsKeyToADS.containsKey(adsIdString)) {
 			throw new RuntimeException("not a valid depositor");
@@ -172,7 +176,7 @@ public class BVerifyClientDemo implements Runnable {
 		
 		ForwardRequest requestToForward = ForwardRequest.newBuilder()
 				.setRequest(request)
-				.setForwardToId(recipient.getIdAsString())
+				.setForwardToId(depositor.getIdAsString())
 				.build();
 		logger.log(Level.INFO, "...forwarding request to client via server");
 		this.blockingStub.forward(requestToForward);
@@ -247,26 +251,29 @@ public class BVerifyClientDemo implements Runnable {
 			throw new RuntimeException("bad proof!");
 		}
 	}
-	
-	public static void main(String[] args) {
-		String base = System.getProperty("user.dir")  + "/demos/";
-		//String base = "/Users/Binh/Desktop/UROP/b_verify-server-demo/demos/";
 
-		System.out.println(base);
+	public static void main(String[] args) {
+		//String base = System.getProperty("user.dir")  + "/demos/";
+		String base = "/Users/Binh/Desktop/UROP/b_verify-server-demo/demos/";
+
 		pki = new PKIDirectory(base+"pki/");
 
 		/**
-		 * Alice: 59d6dd79-4bbe-4043-ba3e-e2a91e2376ae
-		 * Bob: b132bbfa-98bc-4e5d-b32d-f78d603600f5
-		 * Warehouse: 2cd00d43-bf5c-4728-9323-d2ea0092ed36
+		 * Alice: 7795ad85-9a9e-47a4-b7fc-4a58c8697d21
+		 * Bob: 495ead33-b08d-4a47-adf0-b4664043f762
+		 * Warehouse: 86ab72e2-f404-4549-babb-ad332b85f07a
 		 */
-		Account alice = pki.getAccount("59d6dd79-4bbe-4043-ba3e-e2a91e2376ae");
-		Account bob = pki.getAccount("b132bbfa-98bc-4e5d-b32d-f78d603600f5");
-		Account warehouse = pki.getAccount("2cd00d43-bf5c-4728-9323-d2ea0092ed36");
+		for(Account a : pki.getAllAccounts()) {
+			System.out.println(a.getFirstName() + a.getIdAsString());
+		}
+		Account alice = pki.getAccount("7795ad85-9a9e-47a4-b7fc-4a58c8697d21");
+		Account bob = pki.getAccount("495ead33-b08d-4a47-adf0-b4664043f762");
+		Account warehouse = pki.getAccount("86ab72e2-f404-4549-babb-ad332b85f07a");
 		
 		List<Account> depositors = new ArrayList<>();
 		depositors.add(alice);
 		depositors.add(bob);
+		
 		BVerifyClientConfigGui bverifyclientconfiggui = new BVerifyClientConfigGui(warehouse, depositors, pki);
 	}
 }

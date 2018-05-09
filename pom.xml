@@ -85,6 +85,11 @@
       <artifactId>protobuf-java</artifactId>
       <version>3.5.1</version>
   </dependency>  
+  <dependency>
+    <groupId>org.hid4java</groupId>
+    <artifactId>hid4java</artifactId>
+    <version>0.5.0</version>
+</dependency>
   </dependencies>
   <build>
    <plugins>

@@ -29,7 +29,7 @@ public class BVerifyClientConfigGui {
 	
 	private Text textHost;
 	private Text textPort;
-	private Text textUserId;
+	private Text textClientId;
 	private boolean configured;
 	
 	private Account warehouse;
@@ -77,10 +77,10 @@ public class BVerifyClientConfigGui {
 		shell.setSize(450, 180);
 		shell.setText("B_verify Desktop Client");
 		
-		Label lblUserId = new Label(shell, SWT.NONE);
-		lblUserId.setFont(subHeaderLabelFont);
-		lblUserId.setBounds(30, 36, 96, 22);
-		lblUserId.setText("User Id:");
+		Label lblClientId = new Label(shell, SWT.NONE);
+		lblClientId.setFont(subHeaderLabelFont);
+		lblClientId.setBounds(30, 36, 96, 22);
+		lblClientId.setText("Client Id:");
 		
 		Label lblHost = new Label(shell, SWT.NONE);
 		lblHost.setFont(subHeaderLabelFont);
@@ -98,9 +98,9 @@ public class BVerifyClientConfigGui {
 		textPort = new Text(shell, SWT.BORDER);
 		textPort.setBounds(132, 92, 308, 22);
 		
-		textUserId = new Text(shell, SWT.BORDER);
-		textUserId.setText("<-- set once the sync is started -->");
-		textUserId.setBounds(132, 36, 308, 22);
+		textClientId = new Text(shell, SWT.BORDER);
+		textClientId.setText("<-- set once the sync is started -->");
+		textClientId.setBounds(132, 36, 308, 22);
 		
 		Button btnStartSync = new Button(shell, SWT.NONE);
 		btnStartSync.setFont(subHeaderLabelFont);
@@ -125,14 +125,17 @@ public class BVerifyClientConfigGui {
 				String host = textHost.getText();
 				int port = Integer.parseInt(textPort.getText());
 				configured = true;	
+				shell.close();
 				BVerifyClientDemo bverifyclientdemo = new BVerifyClientDemo(warehouse, depositors, host, port);
 				BVerifyClientApp bverifyclientapp = new BVerifyClientApp(bverifyclientdemo, pki, warehouse);
-				BVerifyClientGui bverifyclientgui = new BVerifyClientGui(bverifyclientapp);
-				shell.close();
+				BVerifyClientReadScale bverifyclientreadscale = new BVerifyClientReadScale();
+				BVerifyClientGui bverifyclientgui = new BVerifyClientGui(bverifyclientapp, bverifyclientreadscale);
+				Thread scaleThread = new Thread(bverifyclientreadscale);
+				scaleThread.start();
+//				Thread appThread = new Thread(bverifyclientapp);
+//				appThread.start();
 				bverifyclientgui.openWindow();
-				
-				Thread tr = new Thread(bverifyclientapp);
-				tr.start();
+
 			}
 		};
 		btnStartSync.addListener(SWT.Selection, startSyncListener);
