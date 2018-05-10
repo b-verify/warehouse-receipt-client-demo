@@ -47,7 +47,13 @@ public class BVerifyClientApp implements Runnable, CatenaStatementListener {
 	
 	public void initIssueReceipt(JSONObject receiptJSON) {
 		// DepositorId set to Alice pubkey for demo purposes
-		String depositorId = "7795ad85-9a9e-47a4-b7fc-4a58c8697d21";
+		String depositorId = "df3b507b-31c7-4b07-bea2-4256144c2c41";
+		if (receiptJSON.get("depositor").equals("Alice")) {
+			depositorId = "df3b507b-31c7-4b07-bea2-4256144c2c41";
+		}
+		if (receiptJSON.get("depositor").equals("Alice")) {
+			depositorId = "e5985074-99c1-4fa6-80bc-dca299b5b12f";
+		} 
 		Receipt receipt =
 				Receipt.newBuilder()
 				.setWarehouseId(clientIdString) // Warehouse id set to warehouse pubkey for demo purposes

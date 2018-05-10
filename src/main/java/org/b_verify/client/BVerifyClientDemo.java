@@ -20,6 +20,9 @@ import com.google.protobuf.ByteString;
 import crpyto.CryptographicSignature;
 import crpyto.CryptographicUtils;
 import demo.BootstrapMockSetup;
+import io.grpc.bverify.GetForwardedRequest;
+import io.grpc.bverify.GetForwardedResponse;
+import io.grpc.bverify.TransferReceiptRequest;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.bverify.BVerifyServerAPIGrpc;
@@ -33,6 +36,7 @@ import io.grpc.bverify.IssueReceiptRequest;
 import io.grpc.bverify.PathRequest;
 import io.grpc.bverify.PathResponse;
 import io.grpc.bverify.Receipt;
+import io.grpc.bverify.TransferReceiptRequest;
 import mpt.core.InsufficientAuthenticationDataException;
 import mpt.core.InvalidSerializationException;
 import mpt.core.Utils;
@@ -46,7 +50,7 @@ public class BVerifyClientDemo implements Runnable {
 	private static final Logger logger = Logger.getLogger(BVerifyClientDemo.class.getName());
 
 	private final Account account;
-	private final List<Account> depositors;
+	private final Map<String, Account> depositors;
 	
 	// data
 	private final Map<String, byte[]> adsStringToKey;
@@ -63,22 +67,25 @@ public class BVerifyClientDemo implements Runnable {
 	private final BVerifyServerAPIBlockingStub blockingStub;
 	
 	public BVerifyClientDemo(Account thisWarehouse, 
-			List<Account> depositors, String host, int port) {
+			List<Account> deps, String host, int port) {
 		
 		// hubris ip: 18.85.22.252
 		// hubris port: 50051
-		logger.log(Level.INFO, "...loading mock warehouse connected to server on host: "+host+" port: "+port);
+		logger.log(Level.INFO, "...loading mock warehouse "+thisWarehouse+" connected to server on host: "+host+" port: "+port);
 
 		this.channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
 	    this.blockingStub = BVerifyServerAPIGrpc.newBlockingStub(channel);
 
 		this.account = thisWarehouse;
-		this.depositors = depositors;
 		logger.log(Level.INFO, "...loading mock warehouse "+thisWarehouse.getFirstName());
 		logger.log(Level.INFO, "...with clients: ");
-		for(Account a : depositors) {
+
+		this.depositors = new HashMap<>();
+		for(Account a : deps) {
 			logger.log(Level.INFO, "..."+a.getFirstName());
+			this.depositors.put(a.getIdAsString(), a);
 		}
+
 		assert this.account.getADSKeys().size() == this.depositors.size();
 		logger.log(Level.INFO, "...cares about adses: "+
 				this.account.getADSKeys().stream().map(x -> 
@@ -127,7 +134,16 @@ public class BVerifyClientDemo implements Runnable {
 	 */
 	@Override
 	public void run() {
-		logger.log(Level.INFO, "...polling server for new commitments");
+		logger.log(Level.FINE, "...polling server for forwarded requests");
+		GetForwardedResponse approvals = this.getForwarded();
+		if(approvals.hasTransferReceipt()) {
+			logger.log(Level.INFO, "...transfer request recieved");
+			ForwardRequest forward = this.approveTransferRequestAndApply(approvals.getTransferReceipt());
+			logger.log(Level.INFO, "...forwarding request to "+forward.getForwardToId());
+			this.blockingStub.forward(forward);
+		}
+		logger.log(Level.FINE, "...polling sever for new commitments");
+
 		List<byte[]> commitments  = this.getCommitments();
 		// get the new commitments if any
 		List<byte[]> newCommitments = commitments.subList(this.currentCommitmentNumber+1, commitments.size());
@@ -135,8 +151,7 @@ public class BVerifyClientDemo implements Runnable {
 			for(byte[] newCommitment : newCommitments) {
 				int newCommitmentNumber = this.currentCommitmentNumber + 1;
 				logger.log(Level.INFO, "...new commitment found asking for proof");
-				boolean result = this.checkCommitment(newCommitment, newCommitmentNumber);
-				logger.log(Level.INFO, "...check commitment result:" + result);
+				this.checkCommitment(newCommitment, newCommitmentNumber);
 				this.currentCommitmentNumber = newCommitmentNumber;
 				this.currentCommitment = newCommitment;
 				Date commitmentDate = new Date();
@@ -147,6 +162,50 @@ public class BVerifyClientDemo implements Runnable {
 	
 	public void shutdown() throws InterruptedException {
 	    this.channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+	}
+	
+	private ForwardRequest approveTransferRequestAndApply(TransferReceiptRequest request) {
+		Receipt receipt = request.getReceipt();
+		Account currentOwner = this.depositors.get(request.getCurrentOwnerId());
+		Account newOwner = this.depositors.get(request.getNewOwnerId());
+		logger.log(Level.INFO, "... transfering "+receipt+" from "+currentOwner+" -> "+newOwner);
+		BVerifyClientGui.updateReceiptTransfer(receipt, currentOwner.getFirstName(), newOwner.getFirstName());
+		
+		List<Account> currentOwnerADSAccounts = Arrays.asList(this.account, currentOwner);
+		String currentOwnerADSId = Utils.byteArrayAsHexString(
+				CryptographicUtils.listOfAccountsToADSKey(currentOwnerADSAccounts));
+		AuthenticatedSetServer currentOwnerADS = this.adsKeyToADS.get(currentOwnerADSId);
+		Set<Receipt> currentOwnerData = this.adsKeyToADSData.get(currentOwnerADSId);
+		
+		List<Account> newOwnerADSAccounts = Arrays.asList(this.account, newOwner);
+		String newOwnerADSId = Utils.byteArrayAsHexString(
+				CryptographicUtils.listOfAccountsToADSKey(newOwnerADSAccounts));
+		AuthenticatedSetServer newOwnerADS = this.adsKeyToADS.get(newOwnerADSId);
+		Set<Receipt> newOwnerData = this.adsKeyToADSData.get(newOwnerADSId);
+		
+		byte[] receiptWitness = CryptographicUtils.witnessReceipt(receipt);
+
+		currentOwnerData.remove(receipt);
+		currentOwnerADS.delete(receiptWitness);
+		byte[] currentOwnerNewCmt = currentOwnerADS.commitment();
+		byte[] signatureCurrent = CryptographicSignature.sign(currentOwnerNewCmt, this.account.getPrivateKey());
+		logger.log(Level.INFO, "... current owner ADS "+currentOwnerADSId+ 
+				" NEW ROOT: "+Utils.byteArrayAsHexString(currentOwnerNewCmt));
+		
+		newOwnerData.add(receipt);
+		newOwnerADS.insert(receiptWitness);
+		byte[] newOwnerCmt = newOwnerADS.commitment();
+		byte[] signatureNew = CryptographicSignature.sign(newOwnerCmt, this.account.getPrivateKey());
+		logger.log(Level.INFO, "... new owner ADS "+newOwnerADSId+ 
+				" NEW ROOT: "+Utils.byteArrayAsHexString(newOwnerCmt));
+		
+		request = request.toBuilder().setSignatureWarehouseCurrent(ByteString.copyFrom(signatureCurrent))
+		.setSignatureWarehouseNew(ByteString.copyFrom(signatureNew)).build();
+		ForwardRequest forward = ForwardRequest.newBuilder()
+				.setForwardToId(request.getNewOwnerId())
+				.setTransferReceipt(request)
+				.build();
+		return forward;
 	}
 	
 	public void deposit(Account depositor) {
@@ -173,16 +232,21 @@ public class BVerifyClientDemo implements Runnable {
 				.setReceipt(r)
 				.setSignatureWarehouse(ByteString.copyFrom(signature))
 				.build();
-		
 		ForwardRequest requestToForward = ForwardRequest.newBuilder()
-				.setRequest(request)
+				.setIssueReceipt(request)
 				.setForwardToId(depositor.getIdAsString())
 				.build();
 		logger.log(Level.INFO, "...forwarding request to client via server");
 		this.blockingStub.forward(requestToForward);
 	}
 
-	
+	private GetForwardedResponse getForwarded() {
+		GetForwardedRequest request = GetForwardedRequest.newBuilder()
+				.setId(this.account.getIdAsString())
+				.build();
+		return this.blockingStub.getForwarded(request);
+	}
+
 	private List<byte[]> getCommitments() {
 		CommitmentsRequest request = CommitmentsRequest.newBuilder().build();
 		CommitmentsResponse response = this.blockingStub.getCommitments(request);
