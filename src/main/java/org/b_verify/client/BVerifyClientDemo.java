@@ -259,16 +259,16 @@ public class BVerifyClientDemo implements Runnable {
 		pki = new PKIDirectory(base+"pki/");
 
 		/**
-		 * Alice: 7795ad85-9a9e-47a4-b7fc-4a58c8697d21
-		 * Bob: 495ead33-b08d-4a47-adf0-b4664043f762
-		 * Warehouse: 86ab72e2-f404-4549-babb-ad332b85f07a
+		 * Alice: df3b507b-31c7-4b07-bea2-4256144c2c41
+		 * Bob: e5985074-99c1-4fa6-80bc-dca299b5b12f
+		 * Warehouse: 1a32fb0e-4643-4439-a2d8-20929d9825ff
 		 */
 		for(Account a : pki.getAllAccounts()) {
 			System.out.println(a.getFirstName() + a.getIdAsString());
 		}
-		Account alice = pki.getAccount("7795ad85-9a9e-47a4-b7fc-4a58c8697d21");
-		Account bob = pki.getAccount("495ead33-b08d-4a47-adf0-b4664043f762");
-		Account warehouse = pki.getAccount("86ab72e2-f404-4549-babb-ad332b85f07a");
+		Account alice = pki.getAccount("df3b507b-31c7-4b07-bea2-4256144c2c41");
+		Account bob = pki.getAccount("e5985074-99c1-4fa6-80bc-dca299b5b12f");
+		Account warehouse = pki.getAccount("1a32fb0e-4643-4439-a2d8-20929d9825ff");
 		
 		List<Account> depositors = new ArrayList<>();
 		depositors.add(alice);
