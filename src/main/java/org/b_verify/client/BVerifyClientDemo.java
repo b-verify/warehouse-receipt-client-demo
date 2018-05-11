@@ -327,6 +327,8 @@ public class BVerifyClientDemo implements Runnable {
 		 * Bob: e5985074-99c1-4fa6-80bc-dca299b5b12f
 		 * Warehouse: 1a32fb0e-4643-4439-a2d8-20929d9825ff
 		 */
+		// hubris ip: 18.85.22.252
+		// hubris port: 50051
 		for(Account a : pki.getAllAccounts()) {
 			System.out.println(a.getFirstName() + a.getIdAsString());
 		}

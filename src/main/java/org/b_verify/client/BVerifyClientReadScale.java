@@ -25,7 +25,7 @@ public class BVerifyClientReadScale implements Runnable{
 	
 	private int msecPerSec = 1000;
 	private int numSecWait = 2;
-	private int activationWeight = 100;
+	private int activationWeight = 200;
 	private int timeBetweenWeigh = 100;
 	private boolean readingValueFound = true;
 	private boolean startedWeigh = false;

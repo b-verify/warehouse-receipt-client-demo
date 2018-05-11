@@ -540,7 +540,7 @@ public class BVerifyClientGui {
 			}
 		}
 	}
-
+	
 	/**
 	 * Convert Receipt into JSONObject
 	 * @param Receipt receipt
@@ -610,6 +610,6 @@ public class BVerifyClientGui {
 						dataValueIndices[5], dataValueIndices[6], dataValueIndices[7], dataValueIndices[8], dataValueIndices[9],
 						dataValueIndices[10]});			}
 		});
-
+		
 	}
 }
