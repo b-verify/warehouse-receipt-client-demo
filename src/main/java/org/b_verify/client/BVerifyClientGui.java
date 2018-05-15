@@ -104,6 +104,8 @@ public class BVerifyClientGui {
 				display.sleep();
 			}
 		}
+		display.dispose();
+		System.exit(0);
 	}
 
 	/**

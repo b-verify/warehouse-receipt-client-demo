@@ -132,10 +132,7 @@ public class BVerifyClientConfigGui {
 				BVerifyClientGui bverifyclientgui = new BVerifyClientGui(bverifyclientapp, bverifyclientreadscale);
 				Thread scaleThread = new Thread(bverifyclientreadscale);
 				scaleThread.start();
-//				Thread appThread = new Thread(bverifyclientapp);
-//				appThread.start();
 				bverifyclientgui.openWindow();
-
 			}
 		};
 		btnStartSync.addListener(SWT.Selection, startSyncListener);
