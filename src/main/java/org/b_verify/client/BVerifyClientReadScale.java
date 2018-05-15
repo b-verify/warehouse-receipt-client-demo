@@ -25,7 +25,7 @@ public class BVerifyClientReadScale implements Runnable{
 	
 	private int msecPerSec = 1000;
 	private int numSecWait = 2;
-	private int activationWeight = 200;
+	private int activationWeight = 100;
 	private int timeBetweenWeigh = 100;
 	private boolean readingValueFound = true;
 	private boolean startedWeigh = false;
@@ -44,13 +44,18 @@ public class BVerifyClientReadScale implements Runnable{
 
 	@Override
 	public void run() {
+		dymo.read(message, 1000);
+		byte[] data = new byte[2];
+		data[0] = message[5];
+		data[1] = message[4];
+		ByteBuffer wrapped = ByteBuffer.wrap(data);
+		raw_weight = wrapped.getShort();
+		// Reset if weighed item is taken off scale
+		if (raw_weight == 0) {
+			readingValueFound = false;
+			startedWeigh = false;
+		}
 		if (readingValueFound == false) {
-			dymo.read(message, 1000);
-			byte[] data = new byte[2];
-			data[0] = message[5];
-			data[1] = message[4];
-			ByteBuffer wrapped = ByteBuffer.wrap(data);
-			raw_weight = wrapped.getShort();
 			if (raw_weight > activationWeight) {
 				if (startedWeigh == false) {
 					startWeighDate = new Date();
