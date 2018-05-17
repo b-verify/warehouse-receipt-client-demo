@@ -17,7 +17,7 @@ import pki.Account;
 import pki.PKIDirectory;
 
 /**
- * Sets up layout of server configuration page to sync to b_verify server.
+ * Sets up layout of server configuration page to sync with b_verify server.
  * 
  * @author Binh
  */
@@ -40,8 +40,11 @@ public class BVerifyClientConfigGui {
 	private final Font subHeaderLabelFont = new Font(display, new FontData(".AppleSystemUIFont", 12, SWT.NORMAL));
 
 	/**
-	 * Starts the configuration gui.
-	 * @wbp.parser.entryPoint
+	 * Opens the configuration gui given account, depositors and pki.
+	 * 
+	 * @param warehouse Account of the warehouse using the desktop client
+	 * @param depositors List<Account> of depositors to the warehouse
+	 * @param pki PKIDirectory for depositors and warehouse
 	 */
 	public BVerifyClientConfigGui(Account warehouse, List<Account> depositors, PKIDirectory pki) {
 		this.warehouse = warehouse;
@@ -122,6 +125,9 @@ public class BVerifyClientConfigGui {
 				if (configured) {
 					System.out.println("ALREADY CONFIGURED");
 				}
+				
+				// Gets the host and port from user and initializes the demo, app, readscale and gui classes
+				// Readscale class is started afterwards on a separate thread then the gui is opened
 				String host = textHost.getText();
 				int port = Integer.parseInt(textPort.getText());
 				configured = true;	

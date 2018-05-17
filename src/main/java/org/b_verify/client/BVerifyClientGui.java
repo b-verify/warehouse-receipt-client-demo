@@ -75,8 +75,10 @@ public class BVerifyClientGui {
 	private static HashMap<String, Integer> receiptIndices = new HashMap<>();
 
 	/**
+	 * Initializes the client gui with the client app and client read scale.
 	 * 
 	 * @param bverifyclientapp
+	 * @param bverifyclientreadscale
 	 */
 	public BVerifyClientGui(BVerifyClientApp bverifyclientapp, BVerifyClientReadScale bverifyclientreadscale) {
 		this.bverifyclientapp = bverifyclientapp;
@@ -135,8 +137,13 @@ public class BVerifyClientGui {
 		labelClientIdValue.setText(clientAddress);
 	}
 
-	// all updates to GUI must be scheduled via the GUI thread 
-	// this is an example
+	/**
+	 * Updates the current commitment information. Updates to the gui must be run on a separate thread.
+	 * 
+	 * @param newCommitmentNumber
+	 * @param newCommitment
+	 * @param commitmentTime
+	 */
 	public static void updateCurrentCommitment(final int newCommitmentNumber, final byte[] newCommitment, final String commitmentTime) {
 		display.asyncExec(new Runnable() {
 			@Override
@@ -483,16 +490,16 @@ public class BVerifyClientGui {
 						receiptJSON.put(ALL_RECEIPT_COLUMNS[i], selectedItem.getText(i));
 					}
 
-					// Call server to void receipt.
-					//		    			try {
-					//		    				bverifyclientapp.initRedeemReceipt(receiptJSON);
-					//		    			} catch (UnsupportedEncodingException e) {
-					//		    				// TODO Auto-generated catch block
-					//		    				e.printStackTrace();
-					//		    			} catch (RemoteException e) {
-					//		    				// TODO Auto-generated catch block
-					//		    				e.printStackTrace();
-					//		    			}
+					// TODO: Call server to void receipt, uncomment when it is implemented in client app.
+//					try {
+//						bverifyclientapp.initRedeemReceipt(receiptJSON);
+//					} catch (UnsupportedEncodingException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					} catch (RemoteException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
 
 					// Reflect changes in all receipts table. Should not actually do this until gets approved.
 					tableAllReceipts.remove(tableAllReceipts.getSelectionIndices());
@@ -508,6 +515,7 @@ public class BVerifyClientGui {
 
 	/**
 	 * Process issued receipt for it to be reflected in all receipts table.
+	 * Creates new table item and adds it to existing table.
 	 */
 	public static void processIssuedReceipt() {
 		// Find new mappings of values to columns in all receipts table.
@@ -598,11 +606,9 @@ public class BVerifyClientGui {
 				JSONObject receiptJson = convertReceiptToJson(receipt);
 				int transferReceiptIndex = receiptIndices.get(receiptJson.toString());
 				TableItem transferItem = tableAllReceipts.getItem(transferReceiptIndex);
-				System.out.println(receiptJson);
 				receiptIndices.remove(receiptJson.toString());
 				receiptJson.put("depositor", newOwner);
 				receiptIndices.put(receiptJson.toString(), transferReceiptIndex);
-				System.out.println(receiptJson);
 				String[] dataValueIndices = new String[ALL_RECEIPT_COLUMN_COUNT];
 				for (int i=0; i< ALL_RECEIPT_COLUMN_COUNT; i++) {
 					String currentDataValue = receiptJson.getString(ALL_RECEIPT_COLUMNS[i]);
@@ -612,6 +618,5 @@ public class BVerifyClientGui {
 						dataValueIndices[5], dataValueIndices[6], dataValueIndices[7], dataValueIndices[8], dataValueIndices[9],
 						dataValueIndices[10]});			}
 		});
-		
 	}
 }

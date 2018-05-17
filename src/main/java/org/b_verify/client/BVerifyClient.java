@@ -26,12 +26,18 @@ public class BVerifyClient implements CatenaStatementListener {
 	/** Debugging - use this instead of printing to Standard out **/
     private static final Logger log = LoggerFactory.getLogger(BVerifyClient.class);
 
+    /**
+     * Initializes client with account client name and gui.
+     * @param name clientName
+     * @param gui BVerifyClientGui
+     */
 	public BVerifyClient(String name, BVerifyClientGui gui) {
 		appgui = gui;
 		commitments = new ArrayList<BVerifyCommitment>();
         clientName = name;
 	}
 
+	// TODO: Not currently connected with demo code, will be integrated later with Catena
 	@Override
 	public synchronized void onStatementAppended(CatenaStatement s) {
 		log.info("Commitment Added: "+s);

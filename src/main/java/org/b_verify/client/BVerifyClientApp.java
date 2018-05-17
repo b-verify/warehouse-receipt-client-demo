@@ -18,8 +18,7 @@ import pki.PKIDirectory;
 import org.json.*;
 
 /**
- * The main app is responsible for setting up and starting the client as well as
- * managing the desktop client GUI.
+ * The main app is responsible for managing the desktop client GUI.
  * 
  * @author binhle
  */
@@ -36,7 +35,13 @@ public class BVerifyClientApp implements Runnable, CatenaStatementListener {
 	/** Debugging - use this instead of printing to Standard out **/
     private static final Logger log = LoggerFactory.getLogger(BVerifyClientApp.class);
 
-	
+	/**
+	 * Initializes application with pki and client account.
+	 * 
+	 * @param bverifyclientdemo
+	 * @param pki
+	 * @param client
+	 */
 	public BVerifyClientApp(BVerifyClientDemo bverifyclientdemo, PKIDirectory pki, Account client) {
 		this.bverifyclientdemo = bverifyclientdemo;
 		this.pki = pki;
@@ -45,6 +50,12 @@ public class BVerifyClientApp implements Runnable, CatenaStatementListener {
 		log.info("Setting up b_verify client with id: "+ clientIdString);
 	}
 	
+	/**
+	 * Builds a Receipt to send to the server once it receives a JSON storing the fields
+	 * entered in the client gui.
+	 * 
+	 * @param receiptJSON
+	 */
 	public void initIssueReceipt(JSONObject receiptJSON) {
 		// DepositorId set to Alice pubkey for demo purposes
 		String depositorId = "df3b507b-31c7-4b07-bea2-4256144c2c41";
@@ -72,10 +83,15 @@ public class BVerifyClientApp implements Runnable, CatenaStatementListener {
 		bverifyclientdemo.deposit(receipt, recipient);
 	}
 	
+	/**
+	 * Gets client account ID as String
+	 * @return clientIdString
+	 */
 	public String getClientIdString() {
 		return clientIdString;
 	}
 
+	// TODO: Following three functions are not needed for demo, integrated later when Catena is added
 	@Override
 	public void run() {
 		commitmentReader.startAsync();

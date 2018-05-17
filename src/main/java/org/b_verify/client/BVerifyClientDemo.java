@@ -46,6 +46,13 @@ import mpt.set.MPTSetFull;
 import pki.Account;
 import pki.PKIDirectory;
 
+/**
+ * Client demo class that gets the commitments from the server upon starting, handles checking commitments, 
+ * and sending transfer approvals and deposit requests to the server. Also checks the client ADS and proofs
+ * from the server.
+ * 
+ * @author Binh
+ */
 public class BVerifyClientDemo implements Runnable {
 	private static final Logger logger = Logger.getLogger(BVerifyClientDemo.class.getName());
 
@@ -66,6 +73,13 @@ public class BVerifyClientDemo implements Runnable {
 	private final ManagedChannel channel;
 	private final BVerifyServerAPIBlockingStub blockingStub;
 	
+	/**
+	 * Initializes once the client demo receives host and port from the configuration gui.
+	 * @param thisWarehouse Account of the warehouse using this desktop client.
+	 * @param deps List<Account> of the depositors to the warehouse.
+	 * @param host Server host to connect to.
+	 * @param port Server port to connect to.
+	 */
 	public BVerifyClientDemo(Account thisWarehouse, 
 			List<Account> deps, String host, int port) {
 		
@@ -160,10 +174,19 @@ public class BVerifyClientDemo implements Runnable {
 		}
 	}
 	
+	/**
+	 * Stops the connection to the server channel.
+	 * @throws InterruptedException
+	 */
 	public void shutdown() throws InterruptedException {
 	    this.channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
 	}
 	
+	/**
+	 * Gets ForwardRequest given transfer receipt request.
+	 * @param request
+	 * @return Forward Request
+	 */
 	private ForwardRequest approveTransferRequestAndApply(TransferReceiptRequest request) {
 		Receipt receipt = request.getReceipt();
 		Account currentOwner = this.depositors.get(request.getCurrentOwnerId());
@@ -208,10 +231,19 @@ public class BVerifyClientDemo implements Runnable {
 		return forward;
 	}
 	
+	/**
+	 * Deposits a generated receipt given a depositor account.
+	 * @param depositor
+	 */
 	public void deposit(Account depositor) {
 		this.deposit(BootstrapMockSetup.generateReceipt(this.account, depositor), depositor);
 	}
 	
+	/**
+	 * Deposits a receipt to a depositor and forwards the request to the server.
+	 * @param r Receipt
+	 * @param depositor Account
+	 */
 	public void deposit(Receipt r, Account depositor) {
 		logger.log(Level.INFO, "...issuing receipt: " + r + " to " + depositor.getFirstName());
 		byte[] adsId = CryptographicUtils.listOfAccountsToADSKey(Arrays.asList(this.account, depositor));
@@ -240,6 +272,10 @@ public class BVerifyClientDemo implements Runnable {
 		this.blockingStub.forward(requestToForward);
 	}
 
+	/**
+	 * Gets forwarded response.
+	 * @return request GetForwardedResponse
+	 */
 	private GetForwardedResponse getForwarded() {
 		GetForwardedRequest request = GetForwardedRequest.newBuilder()
 				.setId(this.account.getIdAsString())
@@ -247,13 +283,22 @@ public class BVerifyClientDemo implements Runnable {
 		return this.blockingStub.getForwarded(request);
 	}
 
+	/**
+	 * Gets a list of commmitments from server.
+	 * @return response CommitmentsResponse
+	 */
 	private List<byte[]> getCommitments() {
 		CommitmentsRequest request = CommitmentsRequest.newBuilder().build();
 		CommitmentsResponse response = this.blockingStub.getCommitments(request);
 		return response.getCommitmentsList().stream().map(x -> x.toByteArray()).collect(Collectors.toList());
 	}
 	
-	
+	/**
+	 * Get data request given ADS ID and the commitment number.
+	 * @param adsId
+	 * @param commitmentNumber
+	 * @return list of receipts List<Receipt>
+	 */
 	private List<Receipt> getDataRequest(byte[] adsId, int commitmentNumber){
 		DataRequest request = DataRequest.newBuilder()
 				.setAdsId(ByteString.copyFrom(adsId))
@@ -264,6 +309,12 @@ public class BVerifyClientDemo implements Runnable {
 		
 	}
 	
+	/**
+	 * Gets path in the ADS tree.
+	 * @param adsIds
+	 * @param commitment
+	 * @return res MPTDictionaryPartial
+	 */
 	private MPTDictionaryPartial getPath(List<byte[]> adsIds, int commitment) {
 		PathRequest request = PathRequest.newBuilder()
 				.setCommitmentNumber(commitment)
@@ -280,6 +331,12 @@ public class BVerifyClientDemo implements Runnable {
 		return res;
 	}
 	
+	/**
+	 * Checks a commitment from the server and the proof that it provides.
+	 * @param commitment
+	 * @param commitmentNumber
+	 * @return boolean whether the commitment is correct.
+	 */
 	private boolean checkCommitment(byte[] commitment, int commitmentNumber) {
 		logger.log(Level.INFO, "...checking commtiment : #"+commitmentNumber+
 				" | "+Utils.byteArrayAsHexString(commitment));
@@ -316,8 +373,15 @@ public class BVerifyClientDemo implements Runnable {
 		}
 	}
 
+	/**
+	 * Main method for the demo. Initializes the pki and list of depositors then starts
+	 * the client configuration gui to ask for server information in order to establish a
+	 * connection.
+	 * 
+	 * @param args
+	 */
 	public static void main(String[] args) {
-		//String base = System.getProperty("user.dir")  + "/demos/";
+		// TODO: Needs to change to be the location of the folder where the pki is stored.
 		String base = "/Users/Binh/Desktop/UROP/b_verify-server-demo/demos/";
 
 		pki = new PKIDirectory(base+"pki/");
@@ -327,8 +391,6 @@ public class BVerifyClientDemo implements Runnable {
 		 * Bob: e5985074-99c1-4fa6-80bc-dca299b5b12f
 		 * Warehouse: 1a32fb0e-4643-4439-a2d8-20929d9825ff
 		 */
-		// hubris ip: 18.85.22.252
-		// hubris port: 50051
 		for(Account a : pki.getAllAccounts()) {
 			System.out.println(a.getFirstName() + a.getIdAsString());
 		}
