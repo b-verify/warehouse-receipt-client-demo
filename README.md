@@ -4,33 +4,39 @@ First install the package and its dependencies by running
 
 The system should pass the tests and return "BUILD SUCCESS"
 
-Next to start bitcoind and setup the regtest environment run 
+Now navigate to the directory where the b-verify/server-demo project is located and run 
 
-`$sh setup_regtest.sh`
+`$./run_server.sh ./run_alice.sh ./run_bob.sh`
 
-and to send funds to the server
+in order to start up the server and two mock depositors, Alice and Bob.
 
-`$sh send_funds.sh`
+Then open the b-verify/desktop-client-demo in Eclipse and run the BVerifyClientDemo.java file located in 
+src/main/java/org.b_verify.client as a Java Application.
 
-Now everything is setup to start the server
+The desktop client configuration GUI should pop up and then enter the host and port number of the server.
+You can connect to a remote server or the default one that is started locally by running the ./run_server.sh script.
+The host number for the default is 127.0.0.1 and the port number is 50051. Once entered, hit the START SYNC button.
+This starts the downloading and processing of commitments from the server.
 
-`$mvn exec:java -Dexec.mainClass=org.b_verify.server.BVerifyServerApp`
+When the sync suceeds, the desktop client GUI will open. You can now fill out the PROCESS NEW RECEIPT fields and issue a
+new receipt request to either of the mock depositors, Alice and Bob. You can specify which depositor by writing in 'Alice' or
+'Bob' in the DEPOSITOR field of the section. Once Alice and Bob approves the new receipt request, which these mock depositors 
+do automatically, the new receipt will be confirmed and added to the ALL RECEIPTS table.
 
-look at the console output and it will print something like this 
+If there is a DYMO M10 scale available, you can weigh items which automatically fills out and cryptographically signs the WEIGHT 
+field of the PROCESS NEW RECEIPT section. This demonstrates the application's ability to integrate with IoT devices. A 
+similar IoT process for filling out the VOLUME and HUMIDITY would ideally be implemented in a real-world implementation of 
+this application.
 
-`2018-04-01 13:07:43,513 [org.b_verify.server.BVerifyServerApp.main()] INFO  BVerifyServerApp::main - network=regtest | addr=mgesAzJfaZuhbiF1ZDvoGNRbQBsdzGwVKE | txid=acb5f7ce4075cc57dbf468b268403da8b4683408a4ce585af1a594c0cb32db58`
+The mock depositors are also able to request receipt transfers on the mobile client application. Once a transfer receipt is 
+requested and confirmed by the two involved depositors, the desktop client will check the commitment and proof from the 
+server reflecting the transferred receipt ownership and then the ALL RECEIPTS table will be updated to show the new owner 
+of the receipt.
 
-The server will keep running. Now in a separate terminal window start a client by running 
+After issue receipt requests and transfer receipt requests are updated, these actions will be batched by the server and 
+then commitments will be published by the server. Information about the latest server commitment will be reflected in the 
+LAST VERIFIED COMMITMENT section of the desktop client GUI.
 
-`$mvn exec:java -Dexec.mainClass=org.b_verify.client.BVerifyClientGui`
-
-The GUI should pop up and you should enter the _txid_ , _addr_ and _network_ from the server output to the client gui and hit the __SYNC__ button. This starts the download of the blockchain and processing. The sync will succeed, but since there are no commitments yet the latest commitment will be blank. 
-
-
-Things are pretty boring with two clients. Instead open up another client by following the same procedure in a separate window.
-
-To transfer funds from one client to another copy the _client address_ from one client into the transfer section of the other. Enter and amount and hit the _transfer_ button. Now because of a bug it is required to manually generate a block. To do this use the shell script
-
-`$sh mine_block.sh`
-
-This will publish the server commitment, which BOTH clients will read and verify. The latest commitment section should update accordingly.
+NOTE: In order to run the desktop-client-demo project in Eclipse, the server-demo project must be included in the build path.
+Otherwise, a jar of the server-demo project may be included as a dependency in the pom.xml file. The desktop-client-demo project
+could also be run as a jar on the command line.
